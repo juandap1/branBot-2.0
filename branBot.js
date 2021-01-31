@@ -56,10 +56,14 @@ function identify(inp, msg) {
   if (inp.includes("<@!")) {
     return msg.guild.member(msg.mentions.users.first());
   } else {
-    return msg.guild.members.cache.array().filter(member => { return member.displayName.toLowerCase() === inp.toLowerCase()})[0];
+    return msg.guild.members.cache.array().filter((member) => {
+      return member.displayName.toLowerCase() === inp.toLowerCase();
+    })[0];
   }
   return null;
 }
+
+
 
 //Gifs
 eatGifs = ["https://media1.tenor.com/images/48679297034b0f3f6ee28815905efae8/tenor.gif", "https://media1.tenor.com/images/c0c0f8bb63f38f0ddf6a736354987050/tenor.gif", "https://media1.tenor.com/images/c10b4e9e6b6d2835b19f42cbdd276774/tenor.gif", "https://media1.tenor.com/images/3e4d211cd661a2d7125a6fa12d6cecc6/tenor.gif", "https://media1.tenor.com/images/0de27657daa673ccd7a60cf6919084d9/tenor.gif", "https://media2.giphy.com/media/iWkHDNtcHpB5e/giphy.gif"];
@@ -150,6 +154,8 @@ client.on('message', msg => {
       }
     }
   }
+
+  
 });
 
 client.login('NzQ0MDQwNTk4MjcyNDc1MTgw.Xzdbzg.Qtw6mSSL7k99u5lHJNMQitYcGWE');
