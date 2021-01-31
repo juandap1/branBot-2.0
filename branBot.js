@@ -52,6 +52,15 @@ function timeSince(date) {
   return since;
 }
 
+function identify(inp, msg) {
+  if (inp.includes("<@!")) {
+    return msg.guild.member(msg.mentions.users.first());
+  } else {
+    return msg.guild.members.cache.array().filter(member => { return member.displayName.toLowerCase() === inp.toLowerCase()})[0];
+  }
+  return null;
+}
+
 //Gifs
 eatGifs = ["https://media1.tenor.com/images/48679297034b0f3f6ee28815905efae8/tenor.gif", "https://media1.tenor.com/images/c0c0f8bb63f38f0ddf6a736354987050/tenor.gif", "https://media1.tenor.com/images/c10b4e9e6b6d2835b19f42cbdd276774/tenor.gif", "https://media1.tenor.com/images/3e4d211cd661a2d7125a6fa12d6cecc6/tenor.gif", "https://media1.tenor.com/images/0de27657daa673ccd7a60cf6919084d9/tenor.gif", "https://media2.giphy.com/media/iWkHDNtcHpB5e/giphy.gif"];
 
@@ -95,6 +104,7 @@ client.on('message', msg => {
   if (msg.content.includes('+member')) {
     var parser = msg.content.split(" ");
     if (parser.length == 1) {
+      //Defaults to identifying the author of the message
       var roles = msg.member.roles.cache.array().join(", ");
       var joinedAt = msg.member.joinedAt.toString().split(" ");
       var createdAt = msg.author.createdAt.toString().split(" ");
@@ -112,6 +122,32 @@ client.on('message', msg => {
         { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.author.createdAt) + ")**", inline: true}
       )
       msg.channel.send(embed);
+    } else {
+      //If identifying a specific member
+      var info = identify(parser[1], msg);
+      if (info == null) {
+        msg.channel.send("Unable to Identify the User Specified");
+      } else {
+        var member = info;
+        var user = member.user;
+        var roles = member.roles.cache.array().join(", ");
+        var joinedAt = member.joinedAt.toString().split(" ");
+        var createdAt = user.createdAt.toString().split(" ");
+        var embed = new Discord.MessageEmbed();
+        embed.setTitle(user.tag);
+        embed.setDescription("Here is some information about " + member.displayName);
+        embed.setColor("#ffae42");
+        embed.setThumbnail(user.avatarURL());
+        embed.addFields(
+          { name: '\:pencil2: Display Name', value: member.displayName, inline: true},
+          { name: '\:id: User ID', value: user.id, inline: true},
+          { name: '\:arrow_up: Highest Role', value: member.roles.highest, inline: true},
+          { name: '\:scroll: Roles', value: roles},
+          { name: '\:calendar: Joined ' + msg.guild.name, value: joinedAt[0] + ", " + joinedAt[2] + " " + joinedAt[1] + " " + joinedAt[3] + "\n**(" + timeSince(member.joinedAt) + ")**", inline: true},
+          { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(user.createdAt) + ")**", inline: true}
+        )
+        msg.channel.send(embed);
+      }
     }
   }
 });
