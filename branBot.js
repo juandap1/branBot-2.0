@@ -1,5 +1,6 @@
 var mysql = require('mysql');
 var connection = require('./connect').establishConnect();
+var token = require('./token');
 
 /*connection.query('SELECT * FROM score', function (error, results, fields) {
     if (error)
@@ -92,7 +93,6 @@ client.on('message', msg => {
     }
   }
 
-
   //gif commands
   if (msg.content === '+eat') {
     var embed = new Discord.MessageEmbed();
@@ -155,7 +155,68 @@ client.on('message', msg => {
     }
   }
 
-  
+  //server info
+  if (msg.content === '+server') {
+    var numOfPeople = msg.guild.members.cache.array().filter((member) => {
+      return member.user.bot === false;
+    }).length;
+    var numOfBots = msg.guild.memberCount - numOfPeople;
+    var emojis = msg.guild.emojis.cache.array();
+    var animojis = emojis.filter((emoji) => {
+      return emoji.animated === true;
+    });
+    var channels = msg.guild.channels.cache.array();
+    var categories = channels.filter((channel) => {
+      return channel.type === "category";
+    });
+    var voiceCalls = channels.filter((channel) => {
+      return channel.type === "voice";
+    });
+    var roles = msg.guild.roles.cache.array();
+    var roleList;
+    if (roles.length > 40) {
+      roles.splice(39);
+      roleList = roles.join(", ") + ", and more...";
+    } else {
+      roleList = roles.join(", ");
+    }
+    var createdAt = msg.guild.createdAt.toString().split(" ");
+    var embed = new Discord.MessageEmbed();
+    embed.setTitle("**" + msg.guild.name + " (ID: " + msg.guild.id + ")**");
+    embed.setDescription("Here is some information about **" + msg.guild.name + "**");
+    embed.setColor("#00CED1");
+    embed.addFields(
+      { name: "\:crown: Owner", value: msg.guild.owner.user.tag, inline: true},
+      { name: "\:busts_in_silhouette: Members", value: "**" +numOfPeople + "** Users\n**" + numOfBots + "** Bots", inline: true},
+      { name: "\:sunglasses: Emojis (" + emojis.length + ")", value: "Static: **" + (emojis.length - animojis.length) + "**\nAnimated: **" + animojis.length + "**", inline: true},
+      { name: "\:dividers: Categories", value: categories.length + " Categories", inline: true},
+      { name: "\:speech_balloon: Channels (" + (channels.length-categories.length) + ")", value: "Text: **" + (channels.length-voiceCalls.length-categories.length) + "**\nVoice: **" + voiceCalls.length + "**", inline: true},
+      { name: "\:arrow_up: Highest Role", value: msg.guild.roles.highest, inline: true},
+      { name: "\:scroll: Roles (" + msg.guild.roles.cache.array().length + ")", value: roleList},
+      { name: "\:calendar: Created At", value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.guild.createdAt) + ")**"}
+    );
+    msg.channel.send(embed);
+  }
+
+  if (msg.author.bot !== true) {
+    var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+    connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
+      //console.log(result);
+      if (result.length === 0) {
+        var sql = "INSERT INTO stats (userID, guildID, messageCount) VALUES ?";
+        var values = [[msg.author.id, msg.guild.id, 1]];
+        connection.query(sql, [values], function (err, result) {
+          if (err) throw err;
+        });
+      } else {
+        var sql = "UPDATE stats SET messageCount = messageCount + 1 WHERE userID= ? AND guildID= ?";
+        connection.query(sql, [msg.author.id, msg.guild.id], function (err, result) {
+          if (err) throw err;
+        });
+      }
+    });
+  }
+
 });
 
-client.login('NzQ0MDQwNTk4MjcyNDc1MTgw.Xzdbzg.Qtw6mSSL7k99u5lHJNMQitYcGWE');
+client.login(token);
