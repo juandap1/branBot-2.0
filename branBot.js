@@ -68,6 +68,13 @@ function level (m, vc) {
   return 1;
 }
 
+function timeStamp(timestamp) {
+  var hours = Math.floor(timestamp / 60 / 60);
+  var minutes = Math.floor(timestamp / 60) - (hours * 60);
+  var seconds = timestamp % 60;
+  return hours + ' hrs ' + minutes + ' min ' + seconds + ' sec';
+}
+
 
 
 //Gifs
@@ -97,14 +104,14 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
           var present = new Date();
           var difference = Math.floor(present/1000) - time[0].joinedAt;
           if (result.length === 0) {
-            var sql = "INSERT INTO stats (userID, guildID, vcTime) VALUES ?";
-            var values = [[oldMember.id, oldMember.guild.id, difference]];
+            var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+            var values = [[oldMember.id, oldMember.guild.id, difference, Math.floor(difference/2)]];
             connection.query(sql, [values], function (err, result) {
               if (err) throw err;
             });
           } else {
-            var sql = "UPDATE stats SET vcTime = ? WHERE userID= ? AND guildID= ?";
-            connection.query(sql, [result[0].vcTime+difference, oldMember.id, oldMember.guild.id], function (err, result) {
+            var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+            connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/2), oldMember.id, oldMember.guild.id], function (err, result) {
               if (err) throw err;
             });
           }
@@ -164,7 +171,7 @@ client.on('message', msg => {
     } else {
       //If identifying a specific member
       var info = identify(parser[1], msg);
-      if (info == null) {
+      if (info === null || info.user.bot === true) {
         msg.channel.send("Unable to Identify the User Specified");
       } else {
         var member = info;
@@ -244,7 +251,7 @@ client.on('message', msg => {
       //Takes second part of input to identify user in question
       member = identify(parser[1], msg);
     }
-    if (member !== null) {
+    if (member !== null && member.user.bot === false) {
       connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], function (err, result) {
         if (err) throw err;
         var messageCount = result[0].messageCount;
@@ -255,7 +262,11 @@ client.on('message', msg => {
         if (vcTime === null) {
           vcTime = 0;
         }
-        connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY messageCount DESC", [msg.guild.id], function (err, ranking) {
+        var xp = result[0].xp;
+        if (xp > 1000) {
+          xp = Math.floor(xp/100)/10 + "k";
+        }
+        connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], function (err, ranking) {
           var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
           var embed = new Discord.MessageEmbed();
           embed.setTitle(member.user.tag);
@@ -264,7 +275,8 @@ client.on('message', msg => {
           embed.addFields(
             { name: "RANK", value: "#" + rank},
             { name: "Messages Sent", value: messageCount, inline: true},
-            { name: "Time in Call", value: vcTime, inline: true}
+            { name: "Time in Call", value: timeStamp(vcTime), inline: true},
+            { name: "XP", value: xp }
           );
           msg.channel.send(embed);
         });
@@ -279,14 +291,14 @@ client.on('message', msg => {
     var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
     connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
       if (result.length === 0) {
-        var sql = "INSERT INTO stats (userID, guildID, messageCount) VALUES ?";
-        var values = [[msg.author.id, msg.guild.id, 1]];
+        var sql = "INSERT INTO stats (userID, guildID, messageCount, xp) VALUES ?";
+        var values = [[msg.author.id, msg.guild.id, 1, (Math.floor(Math.random() * 3) + 2)]];
         connection.query(sql, [values], function (err, result) {
           if (err) throw err;
         });
       } else {
-        var sql = "UPDATE stats SET messageCount = ? WHERE userID= ? AND guildID= ?";
-        connection.query(sql, [result[0].messageCount + 1, msg.author.id, msg.guild.id], function (err, result) {
+        var sql = "UPDATE stats SET messageCount = ? , xp = xp + ? WHERE userID= ? AND guildID= ?";
+        connection.query(sql, [result[0].messageCount + 1, (Math.floor(Math.random() * 3) + 2), msg.author.id, msg.guild.id], function (err, result) {
           if (err) throw err;
         });
       }
