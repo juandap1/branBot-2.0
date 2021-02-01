@@ -64,6 +64,10 @@ function identify(inp, msg) {
   return null;
 }
 
+function level (m, vc) {
+  return 1;
+}
+
 
 
 //Gifs
@@ -74,22 +78,53 @@ client.on('ready', () => {
   client.user.setActivity("27D Chess");
 });
 
-/*client.on('voiceStateUpdate', (oldMember, newMember) => {
-  if (newMember.channelID !== null) {
-    console.log(newMember.member.displayName + " joined channel: " + newMember.channelID);
-  } else {
-    console.log(newMember.member.displayName + " has left: " + oldMember.channelID);
+client.on('voiceStateUpdate', (oldMember, newMember) => {
+  if (newMember.channelID !== null) {//Joined a VC
+    if (oldMember.channelID === null) {//Makes sure they aren't just switching vcs
+      var joinedAt = Math.floor(new Date()/1000);
+      var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+      var values = [[newMember.id, newMember.guild.id, joinedAt]];
+      connection.query(sql, [values], function (err, result) {
+        if (err) throw err;
+      });
+    }
+  } else {//Left a VC
+    var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
+    connection.query(check, [oldMember.id, oldMember.guild.id], function (err, time, fields) {
+      connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [oldMember.id, oldMember.guild.id], function (err, ranking) {
+        var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+        connection.query(check, [oldMember.id, oldMember.guild.id], function (err, result, fields) {
+          var present = new Date();
+          var difference = Math.floor(present/1000) - time[0].joinedAt;
+          if (result.length === 0) {
+            var sql = "INSERT INTO stats (userID, guildID, vcTime) VALUES ?";
+            var values = [[oldMember.id, oldMember.guild.id, difference]];
+            connection.query(sql, [values], function (err, result) {
+              if (err) throw err;
+            });
+          } else {
+            var sql = "UPDATE stats SET vcTime = ? WHERE userID= ? AND guildID= ?";
+            connection.query(sql, [result[0].vcTime+difference, oldMember.id, oldMember.guild.id], function (err, result) {
+              if (err) throw err;
+            });
+          }
+        });
+      });
+    });
   }
-});*/
+});
 
 client.on('message', msg => {
   if (msg.content === '+ping') {
     msg.reply("pong");
   }
 
+  //Shutdown the bot
   if (msg.content === '+end') {
     if (msg.author.id === '299264990597349378') {
-      process.exit();
+      connection.query("DELETE FROM vcTracking", function (err, ranking) {//Prevent multiple entries and keep people from gaining time if bot is down.
+        process.exit();
+      });
     }
   }
 
@@ -198,10 +233,51 @@ client.on('message', msg => {
     msg.channel.send(embed);
   }
 
+  //Show stats of users
+  if (msg.content.includes('+stats')) {
+    var parser = msg.content.split(" ");
+    var member;
+    if (parser.length == 1) {
+      //Defaults to identifying the author of the message
+      member = msg.member;
+    } else {
+      //Takes second part of input to identify user in question
+      member = identify(parser[1], msg);
+    }
+    if (member !== null) {
+      connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], function (err, result) {
+        if (err) throw err;
+        var messageCount = result[0].messageCount;
+        if (messageCount === null) {
+          messageCount = 0;
+        }
+        var vcTime = result[0].vcTime;
+        if (vcTime === null) {
+          vcTime = 0;
+        }
+        connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY messageCount DESC", [msg.guild.id], function (err, ranking) {
+          var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
+          var embed = new Discord.MessageEmbed();
+          embed.setTitle(member.user.tag);
+          embed.setColor("#FFD700");
+          embed.setThumbnail(member.user.avatarURL());
+          embed.addFields(
+            { name: "RANK", value: "#" + rank},
+            { name: "Messages Sent", value: messageCount, inline: true},
+            { name: "Time in Call", value: vcTime, inline: true}
+          );
+          msg.channel.send(embed);
+        });
+      });
+    } else {
+      msg.channel.send("Unable to Identify the User Specified");
+    }
+  }
+
+  //Count sent messages
   if (msg.author.bot !== true) {
     var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
     connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
-      //console.log(result);
       if (result.length === 0) {
         var sql = "INSERT INTO stats (userID, guildID, messageCount) VALUES ?";
         var values = [[msg.author.id, msg.guild.id, 1]];
@@ -209,8 +285,8 @@ client.on('message', msg => {
           if (err) throw err;
         });
       } else {
-        var sql = "UPDATE stats SET messageCount = messageCount + 1 WHERE userID= ? AND guildID= ?";
-        connection.query(sql, [msg.author.id, msg.guild.id], function (err, result) {
+        var sql = "UPDATE stats SET messageCount = ? WHERE userID= ? AND guildID= ?";
+        connection.query(sql, [result[0].messageCount + 1, msg.author.id, msg.guild.id], function (err, result) {
           if (err) throw err;
         });
       }
