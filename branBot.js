@@ -57,9 +57,16 @@ function identify(inp, msg) {
   if (inp.includes("<@!")) {
     return msg.guild.member(msg.mentions.users.first());
   } else {
-    return msg.guild.members.cache.array().filter((member) => {
+    var member;
+    member = msg.guild.members.cache.array().filter((member) => {
       return member.displayName.toLowerCase() === inp.toLowerCase();
     })[0];
+    if (member === undefined) {
+      member = msg.guild.members.cache.array().filter((member) => {
+        return member.user.id === inp;
+      })[0];
+    }
+    return member;
   }
   return null;
 }
@@ -75,6 +82,22 @@ function timeStamp(timestamp) {
   return hours + ' hrs ' + minutes + ' min ' + seconds + ' sec';
 }
 
+function DMInterference(newState, oldState) {
+  if (newState.serverDeaf === oldState.serverDeaf) {
+    if (newState.serverMute === oldState.serverMute) {
+      if (newState.selfMute === oldState.selfMute) {
+        if (newState.selfDeaf === oldState.selfDeaf) {
+          if (newState.selfVideo === oldState.selfVideo) {
+            if (newState.streaming === oldState.streaming) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
 
 
 //Gifs
@@ -83,40 +106,53 @@ eatGifs = ["https://media1.tenor.com/images/48679297034b0f3f6ee28815905efae8/ten
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
   client.user.setActivity("27D Chess");
+  client.guilds.cache.array().forEach((guild) => {
+    guild.members.cache.array().filter((member) => {return member.voice.channel}).forEach((member) => {
+      if (member.user.bot === false) {
+        var joinedAt = Math.floor(new Date()/1000);
+        var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+        var values = [[member.id, member.guild.id, joinedAt]];
+        connection.query(sql, [values], function (err, result) {
+          if (err) throw err;
+        });
+      }
+    });
+  });
 });
 
 client.on('voiceStateUpdate', (oldMember, newMember) => {
-  if (newMember.channelID !== null) {//Joined a VC
-    if (oldMember.channelID === null) {//Makes sure they aren't just switching vcs
-      var joinedAt = Math.floor(new Date()/1000);
-      var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
-      var values = [[newMember.id, newMember.guild.id, joinedAt]];
-      connection.query(sql, [values], function (err, result) {
-        if (err) throw err;
-      });
-    }
-  } else {//Left a VC
+  //console.log(oldMember);
+  if (newMember.channelID !== null && oldMember.channelID === null && !newMember.member.user.bot) {//Joined a VC and Makes sure they aren't just switching vcs
+    var joinedAt = Math.floor(new Date()/1000);
+    var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+    var values = [[newMember.id, newMember.guild.id, joinedAt]];
+    connection.query(sql, [values], function (err, result) {
+      if (err) throw err;
+    });
+  } else if (!DMInterference(oldMember, newMember)) {//Left a VC
     var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
     connection.query(check, [oldMember.id, oldMember.guild.id], function (err, time, fields) {
-      connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [oldMember.id, oldMember.guild.id], function (err, ranking) {
-        var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
-        connection.query(check, [oldMember.id, oldMember.guild.id], function (err, result, fields) {
-          var present = new Date();
-          var difference = Math.floor(present/1000) - time[0].joinedAt;
-          if (result.length === 0) {
-            var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
-            var values = [[oldMember.id, oldMember.guild.id, difference, Math.floor(difference/2)]];
-            connection.query(sql, [values], function (err, result) {
-              if (err) throw err;
-            });
-          } else {
-            var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
-            connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/2), oldMember.id, oldMember.guild.id], function (err, result) {
-              if (err) throw err;
-            });
-          }
+      if (time.length !== 0) {
+        connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [oldMember.id, oldMember.guild.id], function (err, ranking) {
+          var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+          connection.query(check, [oldMember.id, oldMember.guild.id], function (err, result, fields) {
+            var present = new Date();
+            var difference = Math.floor(present/1000) - time[0].joinedAt;
+            if (result.length === 0) {
+              var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+              var values = [[oldMember.id, oldMember.guild.id, difference, Math.floor(difference/30)]];
+              connection.query(sql, [values], function (err, result) {
+                if (err) throw err;
+              });
+            } else {
+              var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+              connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/30), oldMember.id, oldMember.guild.id], function (err, result) {
+                if (err) throw err;
+              });
+            }
+          });
         });
-      });
+      }
     });
   }
 });
@@ -129,9 +165,48 @@ client.on('message', msg => {
   //Shutdown the bot
   if (msg.content === '+end') {
     if (msg.author.id === '299264990597349378') {
-      connection.query("DELETE FROM vcTracking", function (err, ranking) {//Prevent multiple entries and keep people from gaining time if bot is down.
-        process.exit();
+      var all = "SELECT * FROM vctracking";
+      connection.query(all, function (err, result, fields) {
+        if (result.length === 0) {
+          process.exit();
+        }
+        for (var i = 0; i < result.length; i++) {
+          var current = result[i];
+          var index = i;
+          connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [result[i].userID, result[i].guildID], function (err, ranking) {
+            var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+            connection.query(check, [current.userID, current.guildID], function (err, checkRes, fields) {
+              var present = new Date();
+              var difference = Math.floor(present/1000) - current.joinedAt;
+              check = (index == result.length-1);
+              if (checkRes.length === 0) {
+                var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+                var values = [[current.userID, current.guildID, difference, Math.floor(difference/30)]];
+                connection.query(sql, [values], function (err, result) {
+                  if (err) throw err;
+                  if (check) {
+                    process.exit();
+                  }
+                });
+              } else {
+                var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+                connection.query(sql, [checkRes[0].vcTime+difference, Math.floor(difference/30), current.userID, current.guildID], function (err, result) {
+                  if (err) throw err;
+                  if (check) {
+                    process.exit();
+                  }
+                });
+              }
+            });
+          });
+        }
       });
+    }
+  }
+
+  if (msg.content === '+kill') {
+    if (msg.author.id === '299264990597349378') {
+      process.exit();
     }
   }
 
@@ -304,6 +379,66 @@ client.on('message', msg => {
       }
     });
   }
+
+  //leaderboard
+  if (msg.content === '+leaderboard') {
+    var member = msg.member;
+    connection.query("SELECT * FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], function (err, ranking) {
+      var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
+      var count = 20;
+      var leaderboard = "";
+      if (ranking.length < 20) {
+        count = ranking.length;
+      }
+      for (var i = 1; i <= count; i++) {
+        var user = identify(ranking[i-1].userID, msg).displayName;
+        var xp = ranking[i-1].xp;
+        if (xp > 1000) {
+          xp = Math.floor(xp/100)/10 + "k";
+        }
+        if (i == 1) {
+          leaderboard += "\:first_place: " + user + " - " + xp + "\n";
+        } else if (i == 2) {
+          leaderboard += "\:second_place: " + user + " - " + xp + "\n";
+        } else if (i == 3) {
+          leaderboard += "\:third_place: " + user + " - " + xp + "\n";
+        } else {
+          leaderboard += i + "# " + user + " - " + xp + "\n";
+        }
+      }
+      var embed = new Discord.MessageEmbed();
+      embed.setTitle(msg.guild.name + "'s Leveling Leaderboard");
+      embed.setDescription("Here is the current leveling leaderboard of **" + msg.guild.name + "**.");
+      embed.setColor("#FFD700");
+      embed.addFields(
+        { name: "Your Rank", value: "You are currently ranked #" + rank + " in this server"},
+        { name: "TOP 20", value: leaderboard, inline: true}
+      );
+      msg.channel.send(embed);
+    });
+  }
+
+  //jail: Stores role of user and assigns a jail role (Role needs to restrict every channel to no see except one)
+  /*if (msg.content.includes('+jail')) {
+    var parser = msg.content.split(" ");
+    if (parser.length === 0) {//If no parameters given
+      var embed = new Discord.MessageEmbed();
+      embed.setDescription("Please specify a user to jail");
+      embed.setColor("#FF0000");
+      msg.reply(embed);
+    } else {
+      member = identify(parser[1], msg);
+      connection.query("SELECT * FROM guild WHERE guildID = ?", [msg.guild.id], function (err, guildInfo) {
+        var roles = [];
+        member.roles.cache.array().forEach((role) => {
+          roles.push(role.id);
+        });
+        roles = roles.join(",");
+        member.roles.set([guildInfo.jailRoleID]);
+      });
+
+    }
+  }*/
 
 });
 
