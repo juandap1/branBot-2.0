@@ -2,14 +2,17 @@ var mysql = require('mysql');
 var connection = require('./connect').establishConnect();
 var token = require('./token');
 
-/*connection.query('SELECT * FROM score', function (error, results, fields) {
+connection.query('SELECT * FROM stats', function (error, results, fields) {
     if (error)
         throw error;
 
     results.forEach(result => {
-        console.log(result);
+        var xp = Math.floor(result.vcTime/30);
+        for (var i = 0; i < result) {
+
+        }
     });
-});*/
+});
 
 const Discord = require('discord.js');
 const client = new Discord.Client();
