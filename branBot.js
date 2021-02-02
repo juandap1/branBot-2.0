@@ -369,6 +369,12 @@ client.on('message', msg => {
               }
             });
           });
+          var joinedAt = Math.floor(new Date()/1000);
+          var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+          var values = [[member.id, member.guild.id, joinedAt]];
+          connection.query(sql, [values], function (err, result) {
+            if (err) throw err;
+          });
         }
       });
 
