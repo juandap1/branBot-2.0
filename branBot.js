@@ -128,6 +128,24 @@ function DMInterference(newState, oldState) {
   return true;
 }
 
+function initJail(msg) {
+  msg.guild.roles.create({
+    data: {
+      name: 'Jailed',
+      color: '#777777',
+      position: 1
+    }
+  })
+    .then(console.log)
+    .catch(console.error);
+  var createdAt = 0;
+  msg.guild.roles.cache.array().forEach((role) => {
+    if (role.createdAt > createdAt) {
+
+    }
+  });
+
+}
 
 //Gifs
 var eatGifs = ["https://media1.tenor.com/images/48679297034b0f3f6ee28815905efae8/tenor.gif", "https://media1.tenor.com/images/c0c0f8bb63f38f0ddf6a736354987050/tenor.gif", "https://media1.tenor.com/images/c10b4e9e6b6d2835b19f42cbdd276774/tenor.gif", "https://media1.tenor.com/images/3e4d211cd661a2d7125a6fa12d6cecc6/tenor.gif", "https://media1.tenor.com/images/0de27657daa673ccd7a60cf6919084d9/tenor.gif", "https://media2.giphy.com/media/iWkHDNtcHpB5e/giphy.gif"];
