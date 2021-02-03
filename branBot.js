@@ -78,8 +78,30 @@ function identify(inp, msg) {
   return undefined;
 }
 
-function level (m, vc) {
-  return 1;
+function levelCalc(xp) {
+  var levelXP = 100;
+  var prevXP;
+  var level = 0;
+  while(xp > levelXP) {
+    prevXP = levelXP;
+    levelXP *= 1.2020569;//Apéry's constant ζ(3) :D
+    level++;
+  }
+  return [level, Math.floor(levelXP), Math.floor(prevXP)];
+}
+
+function pBarGen(part, whole) {
+  var ratio = Math.floor(part/whole*10)*4;
+  var pBar = "";
+  for (var i = 0; i < 40; i++) {
+    if (ratio > 0) {
+      pBar += "=";
+    } else {
+      pBar += "-"
+    }
+    ratio--;
+  }
+  return "[" + pBar + "]";
 }
 
 function timeStamp(timestamp) {
@@ -377,7 +399,6 @@ client.on('message', msg => {
           });
         }
       });
-
       connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], function (err, result) {
         if (err) throw err;
         if (result.length === 0) {
@@ -392,6 +413,10 @@ client.on('message', msg => {
             vcTime = 0;
           }
           var xp = result[0].xp;
+          var levelInfo = levelCalc(xp);
+          var level = levelInfo[0];
+          var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
+          var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
           if (xp > 1000) {
             xp = Math.floor(xp/100)/10 + "k";
           }
@@ -402,10 +427,11 @@ client.on('message', msg => {
             embed.setColor("#FFD700");
             embed.setThumbnail(member.user.avatarURL());
             embed.addFields(
-              { name: "RANK", value: "#" + rank},
+              { name: "RANK", value: "#" + rank, inline: true},
+              { name: "XP", value: xp, inline: true},
+              { name: "Level " + level + ": " + progress, value: levelBar},
               { name: "Messages Sent", value: messageCount, inline: true},
-              { name: "Time in Call", value: timeStamp(vcTime), inline: true},
-              { name: "XP", value: xp }
+              { name: "Time in Call", value: timeStamp(vcTime), inline: true}
             );
             msg.channel.send(embed);
           });
@@ -448,22 +474,26 @@ client.on('message', msg => {
       for (var i = 1; i <= count; i++) {
         var user = identify(ranking[i-1].userID, msg).displayName;
         var xp = ranking[i-1].xp;
+        var levelInfo = levelCalc(xp);
+        var level = levelInfo[0];
+        var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
         if (xp > 1000) {
           xp = Math.floor(xp/100)/10 + "k";
         }
         if (i == 1) {
-          leaderboard += "\:first_place: " + user + " - " + xp + "\n";
+          leaderboard += "\:first_place: - Level **" + level + "** " + progress + " - " + user + "\n";
         } else if (i == 2) {
-          leaderboard += "\:second_place: " + user + " - " + xp + "\n";
+          leaderboard += "\:second_place: - Level **" + level + "** " + progress + " - " + user + "\n";
         } else if (i == 3) {
-          leaderboard += "\:third_place: " + user + " - " + xp + "\n";
+          leaderboard += "\:third_place: - Level **" + level + "** " + progress + " - " + user + "\n";
         } else {
-          leaderboard += i + "# " + user + " - " + xp + "\n";
+          leaderboard += "**#" + i + "** - Level **" + level + "** " + progress + " - " + user + "\n";
         }
       }
       var embed = new Discord.MessageEmbed();
       embed.setTitle(msg.guild.name + "'s Leveling Leaderboard");
       embed.setDescription("Here is the current leveling leaderboard of **" + msg.guild.name + "**.");
+      embed.setThumbnail(msg.guild.iconURL());
       embed.setColor("#FFD700");
       embed.addFields(
         { name: "Your Rank", value: "You are currently ranked #" + rank + " in this server"},
