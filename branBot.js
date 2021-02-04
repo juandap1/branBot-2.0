@@ -2,6 +2,15 @@ var mysql = require('mysql');
 var connection = require('./connect').establishConnect();
 var token = require('./token');
 
+/*const Hypixel = require('hypixel-api-reborn');
+const hypixel = new Hypixel.Client('75291082-db27-4f7f-9920-d7faa17b7f51');
+hypixel.getPlayer('JuanPabby').then(player => {
+  console.log(player); // 141
+}).catch(e => {
+  console.error(e);
+});*/
+
+
 /*connection.query('SELECT * FROM stats', function (error, results, fields) {
     if (error)
         throw error;
@@ -61,7 +70,7 @@ function timeSince(date) {
 }
 
 function identify(inp, msg) {
-  if (inp.includes("<@!")) {
+  if (inp.includes("<@")) {
     return msg.guild.member(msg.mentions.users.first());
   } else {
     var member;
@@ -128,25 +137,6 @@ function DMInterference(newState, oldState) {
   return true;
 }
 
-function initJail(msg) {
-  msg.guild.roles.create({
-    data: {
-      name: 'Jailed',
-      color: '#777777',
-      position: 1
-    }
-  })
-    .then(console.log)
-    .catch(console.error);
-  var createdAt = 0;
-  msg.guild.roles.cache.array().forEach((role) => {
-    if (role.createdAt > createdAt) {
-
-    }
-  });
-
-}
-
 //Gifs
 var eatGifs = ["https://media1.tenor.com/images/48679297034b0f3f6ee28815905efae8/tenor.gif", "https://media1.tenor.com/images/c0c0f8bb63f38f0ddf6a736354987050/tenor.gif", "https://media1.tenor.com/images/c10b4e9e6b6d2835b19f42cbdd276774/tenor.gif", "https://media1.tenor.com/images/3e4d211cd661a2d7125a6fa12d6cecc6/tenor.gif", "https://media1.tenor.com/images/0de27657daa673ccd7a60cf6919084d9/tenor.gif", "https://media2.giphy.com/media/iWkHDNtcHpB5e/giphy.gif"];
 
@@ -207,6 +197,17 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
 });
 
 client.on('message', msg => {
+  var check = "SELECT * FROM guild WHERE guildID= ?";
+  connection.query(check, [msg.guild.id], function (err, time, fields) {
+    if (time.length === 0) {
+      var sql = "INSERT INTO guild (guildID) VALUES ?";
+      var values = [[msg.guild.id]];
+      connection.query(sql, [values], function (err, result) {
+        if (err) throw err;
+      });
+    }
+  });
+
 
   if (msg.content === '+ping') {
     msg.reply("pong");
@@ -386,7 +387,7 @@ client.on('message', msg => {
       //Takes second part of input to identify user in question
       member = identify(parser[1], msg);
     }
-    if (member !== null && member.user.bot === false) {
+    if (member !== undefined && member.user.bot === false) {
       var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
       connection.query(check, [member.id, member.guild.id], function (err, time, fields) {
         if (time.length !== 0) {
@@ -521,28 +522,142 @@ client.on('message', msg => {
     });
   }
 
+
   //jail: Stores role of user and assigns a jail role (Role needs to restrict every channel to no see except one)
-  /*if (msg.content.includes('+jail')) {
-    var parser = msg.content.split(" ");
-    if (parser.length === 0) {//If no parameters given
-      var embed = new Discord.MessageEmbed();
-      embed.setDescription("Please specify a user to jail");
-      embed.setColor("#FF0000");
-      msg.reply(embed);
-    } else {
-      member = identify(parser[1], msg);
-      connection.query("SELECT * FROM guild WHERE guildID = ?", [msg.guild.id], function (err, guildInfo) {
-        var roles = [];
-        member.roles.cache.array().forEach((role) => {
-          roles.push(role.id);
+  if (msg.content.includes('+jail')) {
+    var check = "SELECT * FROM guild WHERE guildID= ?";
+    connection.query(check, [msg.guild.id], function (err, result, fields) {
+      if (result[0].jailRoleID === undefined) {
+        msg.guild.roles.create({
+          data: {
+            name: 'JailTest',
+            color: '#777777',
+            position: msg.guild.me.roles.highest.position
+          }
+        }).then((role) => {
+          msg.guild.channels.cache.array().forEach((channel) => {
+            channel.overwritePermissions([
+              {
+                 id: role.id,
+                 deny: ['VIEW_CHANNEL'],
+              },
+            ], 'Needed to change permissions');
+          });
+          msg.guild.channels.create('Jail', {
+            permissionOverwrites: [
+               {
+                 id: msg.guild.roles.everyone.id,
+                 deny: ['VIEW_CHANNEL'],
+              },
+              {
+                id: role.id,
+                allow: ['VIEW_CHANNEL'],
+              }
+            ],
+          });
+          var sql = "UPDATE guild SET jailRoleID= ? WHERE guildID= ?";
+          connection.query(sql, [role.id, msg.guild.id], function (err, result) {
+            if (err) throw err;
+            var jailRole = role;
+            var parser = msg.content.split(" ");
+            if (parser.length === 1) {//If no parameters given
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("Please specify a user to jail");
+              embed.setColor("#FF0000");
+              msg.reply(embed);
+            } else {
+              member = identify(parser[1], msg);
+              if (member === undefined) {
+                var embed = new Discord.MessageEmbed();
+                embed.setDescription("Specified User could not be found");
+                embed.setColor("#FF0000");
+                msg.reply(embed);
+              } else {
+                if (member.user.bot === true) {
+                  var embed = new Discord.MessageEmbed();
+                  embed.setDescription("You can't jail a bot!");
+                  embed.setColor("#FF0000");
+                  msg.reply(embed);
+                } else {
+                  if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
+                    var roles = [];
+                    member.roles.cache.array().forEach((role) => {
+                      roles.push(role.id);
+                    });
+                    roles = roles.join(",");
+                    member.roles.set([jailRole.id]);
+                    var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
+                    var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
+                    connection.query(sql, [values], function (err, result) {
+                      if (err) throw err;
+                      var embed = new Discord.MessageEmbed();
+                      embed.setTitle("Jailed " + member.user.tag);
+                      embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
+                      embed.setColor("#ff6700");
+                      msg.reply(embed);
+                    });
+                  } else {
+                    var embed = new Discord.MessageEmbed();
+                    embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                    embed.setColor("#FF0000");
+                    msg.reply(embed);
+                  }
+                }
+              }
+            }
+          });
         });
-        roles = roles.join(",");
-        member.roles.set([guildInfo.jailRoleID]);
-      });
-
-    }
-  }*/
-
+      } else {
+        var jailRole = result.jailRoleID;
+        var parser = msg.content.split(" ");
+        if (parser.length === 1) {//If no parameters given
+          var embed = new Discord.MessageEmbed();
+          embed.setDescription("Please specify a user to jail");
+          embed.setColor("#FF0000");
+          msg.reply(embed);
+        } else {
+          member = identify(parser[1], msg);
+          if (member === undefined) {
+            var embed = new Discord.MessageEmbed();
+            embed.setDescription("Specified User could not be found");
+            embed.setColor("#FF0000");
+            msg.reply(embed);
+          } else {
+            if (member.user.bot === true) {
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("You can't jail a bot!");
+              embed.setColor("#FF0000");
+              msg.reply(embed);
+            } else {
+              if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
+                var roles = [];
+                member.roles.cache.array().forEach((role) => {
+                  roles.push(role.id);
+                });
+                roles = roles.join(",");
+                member.roles.set([jailRole.id]);
+                var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
+                var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
+                connection.query(sql, [values], function (err, result) {
+                  if (err) throw err;
+                  var embed = new Discord.MessageEmbed();
+                  embed.setTitle("Jailed " + member.user.tag);
+                  embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
+                  embed.setColor("#ff6700");
+                  msg.reply(embed);
+                });
+              } else {
+                var embed = new Discord.MessageEmbed();
+                embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                embed.setColor("#FF0000");
+                msg.reply(embed);
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 });
 
 client.login(token);
