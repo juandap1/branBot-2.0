@@ -4,6 +4,7 @@ var token = require('./token');
 var MojangAPI = require('mojang-api');
 const Hypixel = require('hypixel-api-reborn');
 const hypixel = new Hypixel.Client('75291082-db27-4f7f-9920-d7faa17b7f51');
+const Canvas = require("canvas");
 
 /*hypixel.getPlayer('JuanPabby').then(player => {
   console.log(player); // 141
@@ -92,9 +93,10 @@ function levelCalc(xp) {
   var levelXP = 100;
   var prevXP = 0;
   var level = 0;
-  while(xp > levelXP) {
+  while(xp >= levelXP) {
+    var diff = levelXP-prevXP;
     prevXP = levelXP;
-    levelXP *= 1.2020569;//Apéry's constant ζ(3) :D
+    levelXP = ((diff)*1.2020569) + prevXP;//Apéry's constant ζ(3) :D
     level++;
   }
   return [level, Math.floor(levelXP), Math.floor(prevXP)];
@@ -165,7 +167,7 @@ var excitedGifs = ["https://thumbs.gfycat.com/CourageousSmoothIrrawaddydolphin-s
 
 var vibingGifs = ["https://media1.tenor.com/images/75521e27d0f2fc49d60ee4ff58a70287/tenor.gif", "https://media1.tenor.com/images/6d5eebe1b4e52b82a3b5637738a146a3/tenor.gif", "https://media1.tenor.com/images/ec6a65ecb144db33e81b31426b2eddaf/tenor.gif"];
 
-var sleepGifs = ["https://i.redd.it/t9wj0wukeby01.jpg", "https://media1.tenor.com/images/feabb8f898343fef8b2f10e2ada7542f/tenor.gif"];
+var sleepGifs = ["https://i.redd.it/t9wj0wukeby01.jpg", "https://media1.tenor.com/images/feabb8f898343fef8b2f10e2ada7542f/tenor.gif", "https://cdn.discordapp.com/attachments/806649764539138058/808915074189361162/image0.png"];
 
 var gnGifs = ["https://media1.tenor.com/images/65b42ae5359c7dd3f108441b618f8c3e/tenor.gif", "https://media1.tenor.com/images/9938f27e201abf793aab05b5fa1fce5f/tenor.gif"];
 
@@ -226,6 +228,21 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
   }
 });
 
+/*
+var parser = msg.content.split(" ");
+if (parser.length === 1) {
+
+} else {
+  var info = identify(parser[1], msg);
+  if (info === undefined || info.user.bot === true) {
+    msg.channel.send("Unable to Identify the User Specified");
+  } else {
+
+  }
+}
+*/
+
+
 client.on('message', async msg => {
   var check = "SELECT * FROM guild WHERE guildID= ?";
   connection.query(check, [msg.guild.id], function (err, time, fields) {
@@ -239,13 +256,37 @@ client.on('message', async msg => {
   });
   var prefix = "+";
 
-
   if (msg.content === `${prefix}ping`) {
     msg.reply("pong");
   }
 
+  if (msg.content === `${prefix}setLvlChannel`) {
+    var check = "SELECT * FROM guild WHERE guildID= ?";
+    connection.query(check, [msg.guild.id], function (err, result, fields) {
+      if (result[0].lvlChannel === null || result[0].lvlChannel === undefined) {
+        msg.guild.channels.create('levelup', {
+          permissionOverwrites: [
+             {
+               id: msg.guild.roles.everyone.id,
+               deny: ['SEND_MESSAGES'],
+            },
+            {
+              id: client.user.id,
+              allow: ['SEND_MESSAGES'],
+            }
+          ],
+        }).then((channel) => {
+          var sql = "UPDATE guild SET lvlChannel= ? WHERE guildID= ?";
+          connection.query(sql, [channel.id, msg.guild.id], function (err, result) {
+            if (err) throw err;
+          });
+        });
+      }
+    });
+  }
+
   //Shutdown the bot
-  if (msg.content === `${prefix}end`) {
+  if (msg.content === `${prefix}endBot`) {
     if (msg.author.id === '299264990597349378') {
       var all = "SELECT * FROM vctracking";
       connection.query(all, function (err, result, fields) {
@@ -286,7 +327,7 @@ client.on('message', async msg => {
     }
   }
 
-  if (msg.content === `${prefix}kill`) {
+  if (msg.content === `${prefix}killBot`) {
     if (msg.author.id === '299264990597349378') {
       process.exit();
     }
@@ -302,13 +343,28 @@ client.on('message', async msg => {
     msg.channel.send(embed);
   }
 
-  if (msg.content === `${prefix}scared`) {
-    var embed = new Discord.MessageEmbed();
-    embed.setDescription("**" + msg.member.displayName + "** is scared");
-    embed.setColor("#00bfff");
-    var gif = randomInd(scaredGifs);
-    embed.setImage(gif);
-    msg.channel.send(embed);
+  if (msg.content.includes(`${prefix}scared`)) {
+    var parser = msg.content.split(" ");
+    if (parser.length === 1) {
+      var embed = new Discord.MessageEmbed();
+      embed.setDescription("**" + msg.member.displayName + "** is scared");
+      embed.setColor("#00bfff");
+      var gif = randomInd(scaredGifs);
+      embed.setImage(gif);
+      msg.channel.send(embed);
+    } else {
+      var info = identify(parser[1], msg);
+      if (info === undefined || info.user.bot === true) {
+        msg.channel.send("Unable to Identify the User Specified");
+      } else {
+        var embed = new Discord.MessageEmbed();
+        embed.setDescription("**" + msg.member.displayName + "** is scared of **" + info.displayName + "**");
+        embed.setColor("#00bfff");
+        var gif = randomInd(scaredGifs);
+        embed.setImage(gif);
+        msg.channel.send(embed);
+      }
+    }
   }
 
   if (msg.content === `${prefix}happy`) {
@@ -329,41 +385,73 @@ client.on('message', async msg => {
     msg.channel.send(embed);
   }
 
-  if (msg.content === `${prefix}vibing`) {
-    var embed = new Discord.MessageEmbed();
-    embed.setDescription("**" + msg.member.displayName + "** is vibing");
-    embed.setColor("#00bfff");
-    var gif = randomInd(vibingGifs);
-    embed.setImage(gif);
-    msg.channel.send(embed);
+  if (msg.content.includes(`${prefix}vibing`)) {
+    var parser = msg.content.split(" ");
+    if (parser.length === 1) {
+      var embed = new Discord.MessageEmbed();
+      embed.setDescription("**" + msg.member.displayName + "** is vibing");
+      embed.setColor("#00bfff");
+      var gif = randomInd(vibingGifs);
+      embed.setImage(gif);
+      msg.channel.send(embed);
+    } else {
+      var info = identify(parser[1], msg);
+      if (info === undefined || info.user.bot === true) {
+        msg.channel.send("Unable to Identify the User Specified");
+      } else {
+        var embed = new Discord.MessageEmbed();
+        embed.setDescription("**" + msg.member.displayName + "** is vibing with " + info.displayName);
+        embed.setColor("#00bfff");
+        var gif = randomInd(vibingGifs);
+        embed.setImage(gif);
+        msg.channel.send(embed);
+      }
+    }
   }
 
-  //made for joan :D
-  if (msg.content === `${prefix}gosleep`) {
-    var embed = new Discord.MessageEmbed();
-    embed.setDescription("**" + msg.member.displayName + "** says to go sleep >:(");
-    embed.setColor("#00bfff");
-    var gif = randomInd(sleepGifs);
-    embed.setImage(gif);
-    msg.channel.send(embed);
+  if (msg.content.includes(`${prefix}goodnight`) || msg.content.includes(`${prefix}sleep`) || msg.content.includes(`${prefix}gosleep`)) {
+    var parser = msg.content.split(" ");
+    if (parser.length === 1) {
+      var embed = new Discord.MessageEmbed();
+      embed.setDescription("**" + msg.member.displayName + "** is going to bed :D");
+      embed.setColor("#00bfff");
+      var gif = randomInd(gnGifs);
+      embed.setImage(gif);
+      msg.channel.send(embed);
+    } else {
+      var info = identify(parser[1], msg);
+      if (info === undefined || info.user.bot === true) {
+        msg.channel.send("Unable to Identify the User Specified");
+      } else {
+        var embed = new Discord.MessageEmbed();
+        embed.setDescription("**" + msg.member.displayName + "** is telling **" + info.displayName + "** to go to sleep >:(");
+        embed.setColor("#00bfff");
+        var gif = randomInd(sleepGifs);
+        embed.setImage(gif);
+        embed.setFooter("This function is dedicated to Joan. Go to sleep Joan >:(");
+        msg.channel.send(embed);
+      }
+    }
   }
 
-  if (msg.content === `${prefix}goodnight`) {
-    var embed = new Discord.MessageEmbed();
-    embed.setDescription("**" + msg.member.displayName + "** is going to bed :D");
-    embed.setColor("#00bfff");
-    var gif = randomInd(gnGifs);
-    embed.setImage(gif);
-    msg.channel.send(embed);
-  }
-
-  if (msg.content === `${prefix}urstupid`) {
-    var embed = new Discord.MessageEmbed();
-    embed.setDescription("**" + msg.member.displayName + "** thinks ur STUPID");
-    embed.setColor("#00bfff");
-    var gif = randomInd(stupidGifs);
-    embed.setImage(gif);
-    msg.channel.send(embed);
+  if (msg.content.includes(`${prefix}urstupid`)) {
+    var parser = msg.content.split(" ");
+    if (parser.length === 1) {
+      msg.reply("Please specify the user you are calling stupid");
+    } else {
+      var info = identify(parser[1], msg);
+      if (info === undefined || info.user.bot === true) {
+        msg.channel.send("Unable to Identify the User Specified");
+      } else {
+        var member = info;
+        var embed = new Discord.MessageEmbed();
+        embed.setDescription("**" + msg.member.displayName + "** thinks **" + member.displayName + "** is STUPID");
+        embed.setColor("#00bfff");
+        var gif = randomInd(stupidGifs);
+        embed.setImage(gif);
+        msg.channel.send(embed);
+      }
+    }
   }
 
   //member info
@@ -520,13 +608,16 @@ client.on('message', async msg => {
           var level = levelInfo[0];
           var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
           var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
-          var bar = (1.5*Math.PI)-(((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]))*2*Math.PI)
+          var ratio = ((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]));
+          ratio *= (2*Math.PI);
+          var bar = ((2*Math.PI)-ratio);
+          bar = ((1.5*Math.PI)-bar);
           if (xp > 1000) {
             xp = Math.floor(xp/100)/10 + "k";
           }
           connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], async function (err, ranking) {
             var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
-            /*const canvas = Canvas.createCanvas(700, 250);
+            const canvas = Canvas.createCanvas(700, 250);
           	const ctx = canvas.getContext('2d');
 
           	const background = await Canvas.loadImage('./wallpaper.jpg');
@@ -570,7 +661,7 @@ client.on('message', async msg => {
             ctx.stroke(); // Stroke function
             ctx.beginPath();
             ctx.strokeStyle='#00bfff'; // for border color
-            ctx.arc(125,125,105,bar,Math.PI*1.5,true);
+            ctx.arc(125,125,105, bar,Math.PI*1.5,true);
             ctx.stroke();
 
           	ctx.beginPath();
@@ -582,19 +673,7 @@ client.on('message', async msg => {
           	ctx.drawImage(avatar, 25, 25, 200, 200);
 
           	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
-            msg.channel.send(attachment);*/
-            var embed = new Discord.MessageEmbed();
-            embed.setTitle(member.user.tag);
-            embed.setColor("#FFD700");
-            embed.setThumbnail(member.user.avatarURL());
-            embed.addFields(
-              { name: "RANK", value: "#" + rank, inline: true},
-              { name: "XP", value: xp, inline: true},
-              { name: "Level " + level + ": " + progress, value: levelBar},
-              { name: "Messages Sent", value: messageCount, inline: true},
-              { name: "Time in Call", value: timeStamp(vcTime), inline: true}
-            );
-            msg.channel.send(embed);
+            msg.channel.send(attachment);
           });
         }
       });
@@ -604,7 +683,7 @@ client.on('message', async msg => {
   }
 
   //Count sent messages
-  if (msg.author.bot !== true) {
+  if (msg.author.bot !== true && msg.content.substring(0, prefix.length) !== prefix) {
     var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
     connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
       if (result.length === 0) {
@@ -614,9 +693,31 @@ client.on('message', async msg => {
           if (err) throw err;
         });
       } else {
-        var sql = "UPDATE stats SET messageCount = ? , xp = xp + ? WHERE userID= ? AND guildID= ?";
-        connection.query(sql, [result[0].messageCount + 1, (Math.floor(Math.random() * 3) + 2), msg.author.id, msg.guild.id], function (err, result) {
+        var xp = result[0].xp;
+        var levelInfo = levelCalc(xp);
+        var level = levelInfo[0];
+        var newXP = (Math.floor(Math.random() * 3) + 2) + xp;
+        var sql = "UPDATE stats SET messageCount = ? , xp = ? WHERE userID= ? AND guildID= ?";
+        connection.query(sql, [result[0].messageCount + 1, newXP, msg.author.id, msg.guild.id], function (err, result) {
           if (err) throw err;
+          levelInfo = levelCalc(newXP);
+          var newLevel = levelInfo[0];
+          if (newLevel > level) {
+            var check = "SELECT * FROM guild WHERE guildID= ?";
+            connection.query(check, [msg.guild.id], function (err, result, fields) {
+              if (result[0].lvlChannel !== undefined || result[0].lvlChannel !== null) {
+                var channel = msg.guild.channels.cache.array().find((channel) => {
+                  return channel.id === result[0].lvlChannel;
+                });
+                var embed = new Discord.MessageEmbed();
+                embed.setTitle("Level Up!");
+                embed.setColor("#00ff00");
+                embed.setDescription("Congratulations <@" + msg.author.id + ">!\nYou just leveled up to level **" + newLevel + "**\nKeep talking to reach higher levels!");
+                embed.setThumbnail(msg.author.displayAvatarURL());
+                channel.send(embed);
+              }
+            });
+          }
         });
       }
     });
@@ -669,7 +770,7 @@ client.on('message', async msg => {
   if (msg.content.includes(`${prefix}jail`)) {
     var check = "SELECT * FROM guild WHERE guildID= ?";
     connection.query(check, [msg.guild.id], function (err, result, fields) {
-      if (result[0].jailRoleID === undefined) {
+      if (result[0].jailRoleID === undefined || result[0].jailRoleID === null) {
         msg.guild.roles.create({
           data: {
             name: 'JailTest',
@@ -678,12 +779,7 @@ client.on('message', async msg => {
           }
         }).then((role) => {
           msg.guild.channels.cache.array().forEach((channel) => {
-            channel.overwritePermissions([
-              {
-                 id: role.id,
-                 deny: ['VIEW_CHANNEL'],
-              },
-            ], 'Needed to change permissions');
+            channel.updateOverwrite(role.id, { VIEW_CHANNEL: false });
           });
           msg.guild.channels.create('Jail', {
             permissionOverwrites: [
