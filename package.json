@@ -16,6 +16,8 @@
     "hypixel-api-reborn": "^5.1.1",
     "jsdom": "^16.4.0",
     "mojang-api": "0.0.2",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "node-canvas-api": "^1.6.0",
+    "voice-speech-recognition": "^1.1.2"
   }
 }
