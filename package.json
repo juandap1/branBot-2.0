@@ -24,6 +24,7 @@
     "node-canvas-api": "^1.6.0",
     "node-opus": "^0.3.3",
     "node-spotify-api": "^1.1.1",
+    "node-valorant-api": "^0.5.0",
     "node-witai-speech": "^1.0.2",
     "opusscript": "0.0.7",
     "path": "^0.12.7",

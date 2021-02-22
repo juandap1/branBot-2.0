@@ -10,7 +10,16 @@ const util = require('util');
 const path = require('path');
 const request = require('request');
 const { Readable } = require('stream');
+const { API, Regions, Locales, Queue } = require("node-valorant-api");
 
+const APIKey = "RGAPI-01aa9cf6-965f-49f7-9e64-025cdb8b5b92"; // Your API Key
+
+// The third parameter is the Region for the Account API
+// choose the one that is the closest to you
+const valorant = new API(Regions.NA, APIKey, Regions.AMERICAS); // An API instance for Valorant query
+valorant.ContentV1.getContent(Locales["en-US"]).then(content => {
+    console.log(content.characters.map(char => { return char.name }));
+});
 //////////////////////////////////////////
 ///////////////// VARIA //////////////////
 //////////////////////////////////////////
@@ -150,35 +159,13 @@ function updateWitAIAppLang(appID, lang, cb) {
     req.write(data)
     req.end()
 }
-
+process.on("unhandledRejection", console.error);
 //////////////////////////////////////////
 //////////////////////////////////////////
 //////////////////////////////////////////
 
-const PREFIX = '+';
-const _CMD_HELP        = PREFIX + 'help';
-const _CMD_JOIN        = PREFIX + 'join';
-const _CMD_LEAVE       = PREFIX + 'leave';
-const _CMD_PLAY        = PREFIX + 'play';
-const _CMD_PAUSE       = PREFIX + 'pause';
-const _CMD_RESUME      = PREFIX + 'resume';
-const _CMD_SHUFFLE     = PREFIX + 'shuffle';
-const _CMD_FAVORITE    = PREFIX + 'favorite';
-const _CMD_UNFAVORITE  = PREFIX + 'unfavorite';
-const _CMD_FAVORITES   = PREFIX + 'favorites';
-const _CMD_GENRE       = PREFIX + 'genre';
-const _CMD_GENRES      = PREFIX + 'genres';
-const _CMD_CLEAR       = PREFIX + 'clear';
-const _CMD_RANDOM      = PREFIX + 'random';
-const _CMD_SKIP        = PREFIX + 'skip';
-const _CMD_QUEUE       = PREFIX + 'list';
-const _CMD_DEBUG       = PREFIX + 'debug';
-const _CMD_TEST        = PREFIX + 'hello';
-const _CMD_LANG        = PREFIX + 'lang';
-const PLAY_CMDS = [_CMD_PLAY, _CMD_PAUSE, _CMD_RESUME, _CMD_SHUFFLE, _CMD_SKIP, _CMD_GENRE, _CMD_GENRES, _CMD_RANDOM, _CMD_CLEAR, _CMD_QUEUE, _CMD_FAVORITE, _CMD_FAVORITES, _CMD_UNFAVORITE];
-
-const EMOJI_GREEN_CIRCLE = '<:hinataThumbsUp:812752899209035826>'
-const EMOJI_RED_CIRCLE = '🔴'
+const EMOJI_GREEN_CIRCLE = '<:hinataThumbsUp:812737382330662933>';
+const EMOJI_RED_CIRCLE = '🔴';
 
 const GENRES = {
     'hip-hop': ['hip-hop', 'hip hop', 'hiphop', 'rap'],
@@ -191,8 +178,6 @@ const GENRES = {
     'techno': ['techno'],
 
 }
-
-const guildMap = new Map();
 /*hypixel.getPlayer('JuanPabby').then(player => {
   console.log(player); // 141
 }).catch(e => {
@@ -429,9 +414,13 @@ if (parser.length === 1) {
   }
 }
 */
-
-
+var liberated = false;
+const guildMap = new Map();
+const DISCORD_MSG_LIMIT = 2000;
 client.on('message', async msg => {
+  var prefix = "+";
+  var PREFIX = '+';
+  var allowedChannel;
   var check = "SELECT * FROM guild WHERE guildID= ?";
   connection.query(check, [msg.guild.id], async function (err, time, fields) {
     if (time.length === 0) {
@@ -440,968 +429,1051 @@ client.on('message', async msg => {
       connection.query(sql, [values], function (err, result) {
         if (err) throw err;
       });
+    } else {
+      if (time[0].prefix !== null && time[0].prefix !== undefined) {
+        prefix = time[0].prefix;
+        PREFIX = time[0].prefix;
+      }
+      if (time[0].restrictedTo !== null && time[0].restrictedTo !== undefined) {
+        allowedChannel = time[0].restrictedTo.split(",");
+      }
     }
-    var allowedChannel = time[0].restrictedTo.split(",");
-    if (((allowedChannel !== undefined || allowedChannel !== null) && allowedChannel.includes(msg.channel.id)) || (allowedChannel === undefined || allowedChannel === null)) {
-      var prefix = "+";
+    if (msg.author.id === "299264990597349378" && msg.content.toLowerCase() === "liberate joan") {
+      liberated = true;
+    }
 
-      if (msg.content === `${prefix}ping`) {
-        msg.reply("pong");
+    if (msg.author.id === "299264990597349378" && msg.content.toLowerCase() === "terminate joan") {
+      liberated = false;
+    }
+
+    if (msg.author.id === "757012448573391000" && !liberated) {
+      var chance2 = Math.floor(Math.random()*3);
+      if (chance2 === 0) {
+        msg.react("<:idiotSandwich:812859184256516127>");
+      } else if (chance2 === 1) {
+        msg.react("🇯");
+        msg.react("<:omegalul:774303978736713791>");
+        msg.react("🅰️");
+        msg.react("🇳");
+        msg.react("🅱️");
+        msg.react("🇺");
+        msg.react("🇲");
+      } else {
+        msg.react("<:joanface:802193764989796382>");
       }
+    }
 
-      if (msg.content === `${prefix}setLvlChannel`) {
-        var check = "SELECT * FROM guild WHERE guildID= ?";
-        connection.query(check, [msg.guild.id], function (err, result, fields) {
-          if (result[0].lvlChannel === null || result[0].lvlChannel === undefined) {
-            msg.guild.channels.create('levelup', {
-              permissionOverwrites: [
-                 {
-                   id: msg.guild.roles.everyone.id,
-                   deny: ['SEND_MESSAGES'],
-                },
-                {
-                  id: client.user.id,
-                  allow: ['SEND_MESSAGES'],
-                }
-              ],
-            }).then((channel) => {
-              var sql = "UPDATE guild SET lvlChannel= ? WHERE guildID= ?";
-              connection.query(sql, [channel.id, msg.guild.id], function (err, result) {
-                if (err) throw err;
-              });
-            });
-          }
-        });
-      }
+    var _CMD_HELP        = PREFIX + 'help';
+    var _CMD_JOIN        = PREFIX + 'join';
+    var _CMD_LEAVE       = PREFIX + 'leave';
+    var _CMD_PLAY        = PREFIX + 'play';
+    var _CMD_PAUSE       = PREFIX + 'pause';
+    var _CMD_RESUME      = PREFIX + 'resume';
+    var _CMD_SHUFFLE     = PREFIX + 'shuffle';
+    var _CMD_FAVORITE    = PREFIX + 'favorite';
+    var _CMD_UNFAVORITE  = PREFIX + 'unfavorite';
+    var _CMD_FAVORITES   = PREFIX + 'favorites';
+    var _CMD_GENRE       = PREFIX + 'genre';
+    var _CMD_GENRES      = PREFIX + 'genres';
+    var _CMD_CLEAR       = PREFIX + 'clear';
+    var _CMD_RANDOM      = PREFIX + 'random';
+    var _CMD_SKIP        = PREFIX + 'skip';
+    var _CMD_QUEUE       = PREFIX + 'list';
+    var _CMD_DEBUG       = PREFIX + 'debug';
+    var _CMD_TEST        = PREFIX + 'hello';
+    var _CMD_LANG        = PREFIX + 'lang';
+    var PLAY_CMDS = [_CMD_PLAY, _CMD_PAUSE, _CMD_RESUME, _CMD_SHUFFLE, _CMD_SKIP, _CMD_GENRE, _CMD_GENRES, _CMD_RANDOM, _CMD_CLEAR, _CMD_QUEUE, _CMD_FAVORITE, _CMD_FAVORITES, _CMD_UNFAVORITE];
 
-      if (msg.content === `${prefix}restrict`) {
-        var check = "SELECT * FROM guild WHERE guildID= ?";
-        connection.query(check, [msg.guild.id], function (err, result, fields) {
-          if (result[0].restrictedTo === null || result[0].restrictedTo === undefined) {
-            msg.guild.channels.create('branBot').then((channel) => {
-              var sql = "UPDATE guild SET restrictedTo= ? WHERE guildID= ?";
-              connection.query(sql, [channel.id, msg.guild.id], function (err, result) {
-                if (err) throw err;
-              });
-            });
-          }
-        });
-      }
+    if ((((allowedChannel !== undefined && allowedChannel !== null) && allowedChannel.includes(msg.channel.id)) || (allowedChannel === undefined || allowedChannel === null))) {
+      if (!msg.author.bot) {
 
-      if (msg.content.includes(`${prefix}allow`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length === 1) {
-          msg.reply("Please specify the channel to allow the bot access to");
-        } else if (parser[0] === `${prefix}allow`) {
-          if (parser[1].includes("<#") && parser[1].includes(">")) {
-            var check = "SELECT * FROM guild WHERE guildID= ?";
-            connection.query(check, [msg.guild.id], function (err, prev, fields) {
-              var channelID = "," + parser[1].replace("<#", "").replace(">", "");
-              var sql = "UPDATE guild SET restrictedTo = ? WHERE guildID= ?";
-              connection.query(sql, [prev[0].restrictedTo + channelID, msg.guild.id], function (err, result) {
-                if (err) throw err;
-                msg.reply(msg.guild.me.displayName + " can now send messages in " + parser[1]);
-              });
-            });
+        if (msg.content === `${prefix}ping`) {
+          msg.reply(`🏓Latency is ${Date.now() - msg.createdTimestamp}ms. API Latency is ${Math.round(client.ws.ping)}ms`);
+        }
+
+        if (msg.content.includes(`${prefix}prefix`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
+            msg.reply("Please specify a new prefix");
           } else {
-            msg.reply("Please tag the channel you want to allow the bot access to");
+            var sql = "UPDATE guild SET prefix = ? WHERE guildID= ?";
+            connection.query(sql, [parser[1], msg.guild.id], function (err, result) {
+              if (err) throw err;
+              msg.reply("Server prefix is now " + parser[1]);
+            });
           }
         }
-      }
 
-      //Shutdown the bot
-      if (msg.content === `${prefix}endBot`) {
-        if (msg.author.id === '299264990597349378') {
-          var all = "SELECT * FROM vctracking";
-          connection.query(all, function (err, result, fields) {
-            if (result.length === 0) {
-              process.exit();
-            }
-            for (var i = 0; i < result.length; i++) {
-              var current = result[i];
-              var index = i;
-              connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [result[i].userID, result[i].guildID], function (err, ranking) {
-                var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
-                connection.query(check, [current.userID, current.guildID], function (err, checkRes, fields) {
-                  var present = new Date();
-                  var difference = Math.floor(present/1000) - current.joinedAt;
-                  check = (index == result.length-1);
-                  if (checkRes.length === 0) {
-                    var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
-                    var values = [[current.userID, current.guildID, difference, Math.floor(difference/30)]];
-                    connection.query(sql, [values], function (err, result) {
-                      if (err) throw err;
-                      if (check) {
-                        process.exit();
-                      }
-                    });
-                  } else {
-                    var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
-                    connection.query(sql, [checkRes[0].vcTime+difference, Math.floor(difference/30), current.userID, current.guildID], function (err, result) {
-                      if (err) throw err;
-                      if (check) {
-                        process.exit();
-                      }
-                    });
+        if (msg.content === `${prefix}setLvlChannel`) {
+          var check = "SELECT * FROM guild WHERE guildID= ?";
+          connection.query(check, [msg.guild.id], function (err, result, fields) {
+            if (result[0].lvlChannel === null || result[0].lvlChannel === undefined) {
+              msg.guild.channels.create('levelup', {
+                permissionOverwrites: [
+                   {
+                     id: msg.guild.roles.everyone.id,
+                     deny: ['SEND_MESSAGES'],
+                  },
+                  {
+                    id: client.user.id,
+                    allow: ['SEND_MESSAGES'],
                   }
+                ],
+              }).then((channel) => {
+                var sql = "UPDATE guild SET lvlChannel= ? WHERE guildID= ?";
+                connection.query(sql, [channel.id, msg.guild.id], function (err, result) {
+                  if (err) throw err;
                 });
               });
             }
           });
         }
-      }
 
-      if (msg.content === `${prefix}killBot`) {
-        if (msg.author.id === '299264990597349378') {
-          process.exit();
+        if (msg.content === `${prefix}restrict`) {
+          var check = "SELECT * FROM guild WHERE guildID= ?";
+          connection.query(check, [msg.guild.id], function (err, result, fields) {
+            if (result[0].restrictedTo === null || result[0].restrictedTo === undefined) {
+              msg.guild.channels.create('branBot').then((channel) => {
+                var sql = "UPDATE guild SET restrictedTo= ? WHERE guildID= ?";
+                connection.query(sql, [channel.id, msg.guild.id], function (err, result) {
+                  if (err) throw err;
+                });
+              });
+            }
+          });
         }
-      }
 
-      //gif commands
-      if (msg.content === `${prefix}eat`) {
-        var embed = new Discord.MessageEmbed();
-        embed.setDescription("**" + msg.member.displayName + "** is eating");
-        embed.setColor("#00bfff");
-        var gif = randomInd(eatGifs);
-        embed.setImage(gif);
-        msg.channel.send(embed);
-      }
+        if (msg.content.includes(`${prefix}allow`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
+            msg.reply("Please specify the channel to allow the bot access to");
+          } else if (parser[0] === `${prefix}allow`) {
+            if (parser[1].includes("<#") && parser[1].includes(">")) {
+              var check = "SELECT * FROM guild WHERE guildID= ?";
+              connection.query(check, [msg.guild.id], function (err, prev, fields) {
+                var channelID = "," + parser[1].replace("<#", "").replace(">", "");
+                var sql = "UPDATE guild SET restrictedTo = ? WHERE guildID= ?";
+                connection.query(sql, [prev[0].restrictedTo + channelID, msg.guild.id], function (err, result) {
+                  if (err) throw err;
+                  msg.reply(msg.guild.me.displayName + " can now send messages in " + parser[1]);
+                });
+              });
+            } else {
+              msg.reply("Please tag the channel you want to allow the bot access to");
+            }
+          }
+        }
 
-      if (msg.content === `${prefix}testGifs`) {
-        var embed = new Discord.MessageEmbed();
-        embed.setDescription("**" + msg.member.displayName + "** is testing a gif");
-        embed.setColor("#00bfff");
-        var gif = randomInd(testGifs);
-        embed.setImage(gif);
-        msg.channel.send(embed);
-      }
+        //Shutdown the bot
+        if (msg.content === `${prefix}endBot`) {
+          if (msg.author.id === '299264990597349378') {
+            var all = "SELECT * FROM vctracking";
+            connection.query(all, function (err, result, fields) {
+              if (result.length === 0) {
+                process.exit();
+              }
+              for (var i = 0; i < result.length; i++) {
+                var current = result[i];
+                var index = i;
+                connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [result[i].userID, result[i].guildID], function (err, ranking) {
+                  var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+                  connection.query(check, [current.userID, current.guildID], function (err, checkRes, fields) {
+                    var present = new Date();
+                    var difference = Math.floor(present/1000) - current.joinedAt;
+                    check = (index == result.length-1);
+                    if (checkRes.length === 0) {
+                      var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+                      var values = [[current.userID, current.guildID, difference, Math.floor(difference/30)]];
+                      connection.query(sql, [values], function (err, result) {
+                        if (err) throw err;
+                        if (check) {
+                          process.exit();
+                        }
+                      });
+                    } else {
+                      var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+                      connection.query(sql, [checkRes[0].vcTime+difference, Math.floor(difference/30), current.userID, current.guildID], function (err, result) {
+                        if (err) throw err;
+                        if (check) {
+                          process.exit();
+                        }
+                      });
+                    }
+                  });
+                });
+              }
+            });
+          }
+        }
 
-      if (msg.content.includes(`${prefix}scared`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length === 1) {
+        if (msg.content === `${prefix}killBot`) {
+          if (msg.author.id === '299264990597349378') {
+            process.exit();
+          }
+        }
+
+        //gif commands
+        if (msg.content === `${prefix}eat`) {
           var embed = new Discord.MessageEmbed();
-          embed.setDescription("**" + msg.member.displayName + "** is scared");
+          embed.setDescription("**" + msg.member.displayName + "** is eating");
           embed.setColor("#00bfff");
-          var gif = randomInd(scaredGifs);
+          var gif = randomInd(eatGifs);
           embed.setImage(gif);
           msg.channel.send(embed);
-        } else if (parser[0] === `${prefix}scared`) {
-          var info = identify(parser[1], msg);
-          if (info === undefined || info.user.bot === true) {
-            msg.channel.send("Unable to Identify the User Specified");
-          } else {
+        }
+
+        if (msg.content === `${prefix}testGifs`) {
+          var embed = new Discord.MessageEmbed();
+          embed.setDescription("**" + msg.member.displayName + "** is testing a gif");
+          embed.setColor("#00bfff");
+          var gif = randomInd(testGifs);
+          embed.setImage(gif);
+          msg.channel.send(embed);
+        }
+
+        if (msg.content.includes(`${prefix}scared`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
             var embed = new Discord.MessageEmbed();
-            embed.setDescription("**" + msg.member.displayName + "** is scared of **" + info.displayName + "**");
+            embed.setDescription("**" + msg.member.displayName + "** is scared");
             embed.setColor("#00bfff");
             var gif = randomInd(scaredGifs);
             embed.setImage(gif);
             msg.channel.send(embed);
+          } else if (parser[0] === `${prefix}scared`) {
+            var info = identify(parser[1], msg);
+            if (info === undefined || info.user.bot === true) {
+              msg.channel.send("Unable to Identify the User Specified");
+            } else {
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("**" + msg.member.displayName + "** is scared of **" + info.displayName + "**");
+              embed.setColor("#00bfff");
+              var gif = randomInd(scaredGifs);
+              embed.setImage(gif);
+              msg.channel.send(embed);
+            }
           }
         }
-      }
 
-      if (msg.content === `${prefix}happy`) {
-        var embed = new Discord.MessageEmbed();
-        embed.setDescription("**" + msg.member.displayName + "** is happy");
-        embed.setColor("#00bfff");
-        var gif = randomInd(happyGifs);
-        embed.setImage(gif);
-        msg.channel.send(embed);
-      }
-
-      if (msg.content === `${prefix}excited`) {
-        var embed = new Discord.MessageEmbed();
-        embed.setDescription("**" + msg.member.displayName + "** is excited");
-        embed.setColor("#00bfff");
-        var gif = randomInd(excitedGifs);
-        embed.setImage(gif);
-        msg.channel.send(embed);
-      }
-
-      if (msg.content.includes(`${prefix}vibing`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length === 1) {
+        if (msg.content === `${prefix}happy`) {
           var embed = new Discord.MessageEmbed();
-          embed.setDescription("**" + msg.member.displayName + "** is vibing");
+          embed.setDescription("**" + msg.member.displayName + "** is happy");
           embed.setColor("#00bfff");
-          var gif = randomInd(vibingGifs);
+          var gif = randomInd(happyGifs);
           embed.setImage(gif);
           msg.channel.send(embed);
-        } else if (parser[0] === `${prefix}vibing`)  {
-          var info = identify(parser[1], msg);
-          if (info === undefined || info.user.bot === true) {
-            msg.channel.send("Unable to Identify the User Specified");
-          } else {
+        }
+
+        if (msg.content === `${prefix}excited`) {
+          var embed = new Discord.MessageEmbed();
+          embed.setDescription("**" + msg.member.displayName + "** is excited");
+          embed.setColor("#00bfff");
+          var gif = randomInd(excitedGifs);
+          embed.setImage(gif);
+          msg.channel.send(embed);
+        }
+
+        if (msg.content.includes(`${prefix}vibing`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
             var embed = new Discord.MessageEmbed();
-            embed.setDescription("**" + msg.member.displayName + "** is vibing with " + info.displayName);
+            embed.setDescription("**" + msg.member.displayName + "** is vibing");
             embed.setColor("#00bfff");
             var gif = randomInd(vibingGifs);
             embed.setImage(gif);
             msg.channel.send(embed);
+          } else if (parser[0] === `${prefix}vibing`)  {
+            var info = identify(parser[1], msg);
+            if (info === undefined || info.user.bot === true) {
+              msg.channel.send("Unable to Identify the User Specified");
+            } else {
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("**" + msg.member.displayName + "** is vibing with " + info.displayName);
+              embed.setColor("#00bfff");
+              var gif = randomInd(vibingGifs);
+              embed.setImage(gif);
+              msg.channel.send(embed);
+            }
           }
         }
-      }
 
-      if (msg.content.includes(`${prefix}goodnight`) || msg.content.includes(`${prefix}sleep`) || msg.content.includes(`${prefix}gosleep`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length === 1) {
-          var embed = new Discord.MessageEmbed();
-          embed.setDescription("**" + msg.member.displayName + "** is going to bed :D");
-          embed.setColor("#00bfff");
-          var gif = randomInd(gnGifs);
-          embed.setImage(gif);
-          msg.channel.send(embed);
-        } else if (parser[0] === `${prefix}goodnight` || parser[0] === `${prefix}sleep` || parser[0] === `${prefix}gosleep`) {
-          var info = identify(parser[1], msg);
-          if (info === undefined || info.user.bot === true) {
-            msg.channel.send("Unable to Identify the User Specified");
-          } else {
+        if (msg.content.includes(`${prefix}goodnight`) || msg.content.includes(`${prefix}sleep`) || msg.content.includes(`${prefix}gosleep`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
             var embed = new Discord.MessageEmbed();
-            embed.setDescription("**" + msg.member.displayName + "** is telling **" + info.displayName + "** to go to sleep >:(");
+            embed.setDescription("**" + msg.member.displayName + "** is going to bed :D");
             embed.setColor("#00bfff");
-            var gif = randomInd(sleepGifs);
-            embed.setImage(gif);
-            embed.setFooter("This function is dedicated to Joan. Go to sleep Joan >:(");
-            msg.channel.send(embed);
-          }
-        }
-      }
-
-      if (msg.content.includes(`${prefix}urstupid`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length === 1) {
-          msg.reply("Please specify the user you are calling stupid");
-        } else {
-          var info = identify(parser[1], msg);
-          if (info === undefined || info.user.bot === true) {
-            msg.channel.send("Unable to Identify the User Specified");
-          } else if (parser[0] === `${prefix}urstupid`) {
-            var member = info;
-            var embed = new Discord.MessageEmbed();
-            embed.setDescription("**" + msg.member.displayName + "** thinks **" + member.displayName + "** is STUPID");
-            embed.setColor("#00bfff");
-            var gif = randomInd(stupidGifs);
+            var gif = randomInd(gnGifs);
             embed.setImage(gif);
             msg.channel.send(embed);
+          } else if (parser[0] === `${prefix}goodnight` || parser[0] === `${prefix}sleep` || parser[0] === `${prefix}gosleep`) {
+            var info = identify(parser[1], msg);
+            if (info === undefined || info.user.bot === true) {
+              msg.channel.send("Unable to Identify the User Specified");
+            } else {
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("**" + msg.member.displayName + "** is telling **" + info.displayName + "** to go to sleep >:(");
+              embed.setColor("#00bfff");
+              var gif = randomInd(sleepGifs);
+              embed.setImage(gif);
+              embed.setFooter("This function is dedicated to Joan. Go to sleep Joan >:(");
+              msg.channel.send(embed);
+            }
           }
         }
-      }
 
-      //member info
-      if (msg.content.includes(`${prefix}member`)) {
-        var parser = msg.content.split(" "); //+member Tuanson returns ["+member", "Tuanson"]
-        if (parser.length == 1) {// +member
-          //Defaults to identifying the author of the message
-          var roles = msg.member.roles.cache.array().join(", ");
-          var joinedAt = msg.member.joinedAt.toString().split(" ");
-          var createdAt = msg.author.createdAt.toString().split(" ");
-          var embed = new Discord.MessageEmbed();
-          embed.setTitle(msg.author.tag);
-          embed.setDescription("Here is some information about " + msg.member.displayName);
-          embed.setColor("#ffae42");
-          embed.setThumbnail(msg.author.avatarURL());
-          embed.addFields(
-            { name: '\:pencil2: Display Name', value: msg.member.displayName, inline: true},
-            { name: '\:id: User ID', value: msg.author.id, inline: true},
-            { name: '\:arrow_up: Highest Role', value: msg.member.roles.highest, inline: true},
-            { name: '\:scroll: Roles', value: roles},
-            { name: '\:calendar: Joined ' + msg.guild.name, value: joinedAt[0] + ", " + joinedAt[2] + " " + joinedAt[1] + " " + joinedAt[3] + "\n**(" + timeSince(msg.member.joinedAt) + ")**", inline: true},
-            { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.author.createdAt) + ")**", inline: true}
-          )
-          msg.channel.send(embed);
-        } else if (parser[0] === `${prefix}member`) {
-          //If identifying a specific member
-          var info = identify(parser[1], msg);
-          if (info === undefined || info.user.bot === true) {
-            msg.channel.send("Unable to Identify the User Specified");
+        if (msg.content.includes(`${prefix}urstupid`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length === 1) {
+            msg.reply("Please specify the user you are calling stupid");
           } else {
-            var member = info;
-            var user = member.user;
-            var roles = member.roles.cache.array().join(", ");
-            var joinedAt = member.joinedAt.toString().split(" ");
-            var createdAt = user.createdAt.toString().split(" ");
+            var info = identify(parser[1], msg);
+            if (info === undefined || info.user.bot === true) {
+              msg.channel.send("Unable to Identify the User Specified");
+            } else if (parser[0] === `${prefix}urstupid`) {
+              var member = info;
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("**" + msg.member.displayName + "** thinks **" + member.displayName + "** is STUPID");
+              embed.setColor("#00bfff");
+              var gif = randomInd(stupidGifs);
+              embed.setImage(gif);
+              msg.channel.send(embed);
+            }
+          }
+        }
+
+        //member info
+        if (msg.content.includes(`${prefix}member`)) {
+          var parser = msg.content.split(" "); //+member Tuanson returns ["+member", "Tuanson"]
+          if (parser.length == 1) {// +member
+            //Defaults to identifying the author of the message
+            var roles = msg.member.roles.cache.array().join(", ");
+            var joinedAt = msg.member.joinedAt.toString().split(" ");
+            var createdAt = msg.author.createdAt.toString().split(" ");
             var embed = new Discord.MessageEmbed();
-            embed.setTitle(user.tag);
-            embed.setDescription("Here is some information about " + member.displayName);
+            embed.setTitle(msg.author.tag);
+            embed.setDescription("Here is some information about " + msg.member.displayName);
             embed.setColor("#ffae42");
-            embed.setThumbnail(user.avatarURL());
+            embed.setThumbnail(msg.author.avatarURL());
             embed.addFields(
-              { name: '\:pencil2: Display Name', value: member.displayName, inline: true},
-              { name: '\:id: User ID', value: user.id, inline: true},
-              { name: '\:arrow_up: Highest Role', value: member.roles.highest, inline: true},
+              { name: '\:pencil2: Display Name', value: msg.member.displayName, inline: true},
+              { name: '\:id: User ID', value: msg.author.id, inline: true},
+              { name: '\:arrow_up: Highest Role', value: msg.member.roles.highest, inline: true},
               { name: '\:scroll: Roles', value: roles},
-              { name: '\:calendar: Joined ' + msg.guild.name, value: joinedAt[0] + ", " + joinedAt[2] + " " + joinedAt[1] + " " + joinedAt[3] + "\n**(" + timeSince(member.joinedAt) + ")**", inline: true},
-              { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(user.createdAt) + ")**", inline: true}
+              { name: '\:calendar: Joined ' + msg.guild.name, value: joinedAt[0] + ", " + joinedAt[2] + " " + joinedAt[1] + " " + joinedAt[3] + "\n**(" + timeSince(msg.member.joinedAt) + ")**", inline: true},
+              { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.author.createdAt) + ")**", inline: true}
             )
             msg.channel.send(embed);
-          }
-        }
-      }
-
-      //server info
-      if (msg.content === `${prefix}server`) {
-        var numOfPeople = msg.guild.members.cache.array().filter((member) => {
-          return member.user.bot === false;
-        }).length;
-        var numOfBots = msg.guild.memberCount - numOfPeople;
-        var emojis = msg.guild.emojis.cache.array();
-        var animojis = emojis.filter((emoji) => {
-          return emoji.animated === true;
-        });
-        var channels = msg.guild.channels.cache.array();
-        var categories = channels.filter((channel) => {
-          return channel.type === "category";
-        });
-        var voiceCalls = channels.filter((channel) => {
-          return channel.type === "voice";
-        });
-        var roles = msg.guild.roles.cache.array();
-        var roleList;
-        if (roles.length > 40) {
-          roles.splice(39);
-          roleList = roles.join(", ") + ", and more...";
-        } else {
-          roleList = roles.join(", ");
-        }
-        var createdAt = msg.guild.createdAt.toString().split(" ");
-        var embed = new Discord.MessageEmbed();
-        embed.setTitle("**" + msg.guild.name + " (ID: " + msg.guild.id + ")**");
-        embed.setDescription("Here is some information about **" + msg.guild.name + "**");
-        embed.setColor("#00CED1");
-        embed.addFields(
-          { name: "\:crown: Owner", value: msg.guild.owner.user.tag, inline: true},
-          { name: "\:busts_in_silhouette: Members", value: "**" +numOfPeople + "** Users\n**" + numOfBots + "** Bots", inline: true},
-          { name: "\:sunglasses: Emojis (" + emojis.length + ")", value: "Static: **" + (emojis.length - animojis.length) + "**\nAnimated: **" + animojis.length + "**", inline: true},
-          { name: "\:dividers: Categories", value: categories.length + " Categories", inline: true},
-          { name: "\:speech_balloon: Channels (" + (channels.length-categories.length) + ")", value: "Text: **" + (channels.length-voiceCalls.length-categories.length) + "**\nVoice: **" + voiceCalls.length + "**", inline: true},
-          { name: "\:arrow_up: Highest Role", value: msg.guild.roles.highest, inline: true},
-          { name: "\:scroll: Roles (" + msg.guild.roles.cache.array().length + ")", value: roleList},
-          { name: "\:calendar: Created At", value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.guild.createdAt) + ")**"}
-        );
-        msg.channel.send(embed);
-      }
-
-      //Show stats of users
-      if (msg.content.includes(`${prefix}stats`)) {
-        var parser = msg.content.split(" ");
-        var member;
-        if (parser.length == 1) {
-          //Defaults to identifying the author of the message
-          member = msg.member;
-          if (member !== undefined && member.user.bot === false) {
-            var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
-            connection.query(check, [member.id, member.guild.id], function (err, time, fields) {
-              if (time.length !== 0) {
-                connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [member.id, member.guild.id], async function (err, ranking) {
-                  var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
-                  connection.query(check, [member.id, member.guild.id], function (err, result, fields) {
-                    var present = new Date();
-                    var difference = Math.floor(present/1000) - time[0].joinedAt;
-                    if (result.length === 0) {
-                      var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
-                      var values = [[member.id, member.guild.id, difference, Math.floor(difference/30)]];
-                      connection.query(sql, [values], function (err, result) {
-                        if (err) throw err;
-                      });
-                    } else {
-                      var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
-                      connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/30), member.id, member.guild.id], function (err, result) {
-                        if (err) throw err;
-                      });
-                    }
-                  });
-                });
-                var joinedAt = Math.floor(new Date()/1000);
-                var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
-                var values = [[member.id, member.guild.id, joinedAt]];
-                connection.query(sql, [values], function (err, result) {
-                  if (err) throw err;
-                });
-              }
-            });
-            connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], async function (err, result) {
-              if (err) throw err;
-              if (result.length === 0) {
-                msg.reply("No stats exist for specified User");
-              } else {
-                var messageCount = result[0].messageCount;
-                if (messageCount === null) {
-                  messageCount = 0;
-                }
-                var vcTime = result[0].vcTime;
-                if (vcTime === null) {
-                  vcTime = 0;
-                }
-                var xp = result[0].xp;
-                var levelInfo = levelCalc(xp);
-                var level = levelInfo[0];
-                var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
-                var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
-                var ratio = ((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]));
-                ratio *= (2*Math.PI);
-                var bar = ((2*Math.PI)-ratio);
-                bar = ((1.5*Math.PI)-bar);
-                if (xp > 1000) {
-                  xp = Math.floor(xp/100)/10 + "k";
-                }
-                connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], async function (err, ranking) {
-                  var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
-                  const canvas = Canvas.createCanvas(700, 250);
-                	const ctx = canvas.getContext('2d');
-
-                	const background = await Canvas.loadImage('./wallpaper.jpg');
-                	ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-                	ctx.strokeStyle = '#74037b';
-                	ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
-                	// Assign the decided font to the canvas
-                	ctx.font = applyText(canvas, member.user.tag, 375, 50);
-                	ctx.fillStyle = '#ffffff';
-                  ctx.strokeStyle = 'black';
-                  ctx.lineWidth = 3;
-                  ctx.strokeText(member.user.tag, 240, 50);
-                	ctx.fillText(member.user.tag, 240, 50);
-                  ctx.font = applyText(canvas, "Rank:", 600, 50);
-                  ctx.strokeText("Rank:", 590, 50);
-                	ctx.fillText("Rank:", 590, 50);
-                  ctx.font = applyText(canvas, "#" + rank, 585, 50);
-                  ctx.strokeText("#" + rank, 575, 95);
-                	ctx.fillText("#" + rank, 575, 95);
-                  ctx.font = applyText(canvas, "Level: " + level + " " + progress, 400, 30);
-                  ctx.strokeText("Level: " + level + " " + progress, 260, 85);
-                	ctx.fillText("Level: " + level + " " + progress, 260, 85);
-                  ctx.font = "28px Arial";
-                  ctx.strokeText("Message Count", 240, 185);
-                	ctx.fillText("Message Count", 240, 185);
-                  ctx.strokeText("Time in Call", 450, 185);
-                	ctx.fillText("Time in Call", 450, 185);
-                  ctx.strokeText(messageCount, 240, 215);
-                	ctx.fillText(messageCount, 240, 215);
-                  ctx.font = applyText(canvas, timeStamp(vcTime), 450, 28);
-                  ctx.strokeText(timeStamp(vcTime), 450, 215);
-                	ctx.fillText(timeStamp(vcTime), 450, 215);
-
-                  ctx.lineWidth = 10;
-                  ctx.arc(125,125,105,0,2*Math.PI,false);
-                  ctx.fillStyle='#1d1f21'; // for color of circle
-                  ctx.fill(); // fill function
-                  ctx.strokeStyle='#1d1f21'; // for border color
-                  ctx.stroke(); // Stroke function
-                  ctx.beginPath();
-                  ctx.strokeStyle='#00bfff'; // for border color
-                  ctx.arc(125,125,105, bar,Math.PI*1.5,true);
-                  ctx.stroke();
-
-                	ctx.beginPath();
-                	ctx.arc(125, 125, 100, 0, Math.PI * 2, true);
-                	ctx.closePath();
-                  ctx.clip();
-
-                	const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ format: 'jpg' }));
-                	ctx.drawImage(avatar, 25, 25, 200, 200);
-
-                	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
-                  msg.channel.send(attachment);
-                });
-              }
-            });
-          } else {
-            msg.channel.send("Unable to Identify the User Specified");
-          }
-        } else if (parser[0] === `${prefix}stats`) {
-          //Takes second part of input to identify user in question
-          member = identify(parser[1], msg);
-          if (member !== undefined && member.user.bot === false) {
-            var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
-            connection.query(check, [member.id, member.guild.id], function (err, time, fields) {
-              if (time.length !== 0) {
-                connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [member.id, member.guild.id], async function (err, ranking) {
-                  var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
-                  connection.query(check, [member.id, member.guild.id], function (err, result, fields) {
-                    var present = new Date();
-                    var difference = Math.floor(present/1000) - time[0].joinedAt;
-                    if (result.length === 0) {
-                      var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
-                      var values = [[member.id, member.guild.id, difference, Math.floor(difference/30)]];
-                      connection.query(sql, [values], function (err, result) {
-                        if (err) throw err;
-                      });
-                    } else {
-                      var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
-                      connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/30), member.id, member.guild.id], function (err, result) {
-                        if (err) throw err;
-                      });
-                    }
-                  });
-                });
-                var joinedAt = Math.floor(new Date()/1000);
-                var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
-                var values = [[member.id, member.guild.id, joinedAt]];
-                connection.query(sql, [values], function (err, result) {
-                  if (err) throw err;
-                });
-              }
-            });
-            connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], async function (err, result) {
-              if (err) throw err;
-              if (result.length === 0) {
-                msg.reply("No stats exist for specified User");
-              } else {
-                var messageCount = result[0].messageCount;
-                if (messageCount === null) {
-                  messageCount = 0;
-                }
-                var vcTime = result[0].vcTime;
-                if (vcTime === null) {
-                  vcTime = 0;
-                }
-                var xp = result[0].xp;
-                var levelInfo = levelCalc(xp);
-                var level = levelInfo[0];
-                var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
-                var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
-                var ratio = ((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]));
-                ratio *= (2*Math.PI);
-                var bar = ((2*Math.PI)-ratio);
-                bar = ((1.5*Math.PI)-bar);
-                if (xp > 1000) {
-                  xp = Math.floor(xp/100)/10 + "k";
-                }
-                connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], async function (err, ranking) {
-                  var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
-                  const canvas = Canvas.createCanvas(700, 250);
-                	const ctx = canvas.getContext('2d');
-
-                	const background = await Canvas.loadImage('./wallpaper.jpg');
-                	ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-
-                	ctx.strokeStyle = '#74037b';
-                	ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
-                	// Assign the decided font to the canvas
-                	ctx.font = applyText(canvas, member.user.tag, 375, 50);
-                	ctx.fillStyle = '#ffffff';
-                  ctx.strokeStyle = 'black';
-                  ctx.lineWidth = 3;
-                  ctx.strokeText(member.user.tag, 240, 50);
-                	ctx.fillText(member.user.tag, 240, 50);
-                  ctx.font = applyText(canvas, "Rank:", 600, 50);
-                  ctx.strokeText("Rank:", 590, 50);
-                	ctx.fillText("Rank:", 590, 50);
-                  ctx.font = applyText(canvas, "#" + rank, 585, 50);
-                  ctx.strokeText("#" + rank, 575, 95);
-                	ctx.fillText("#" + rank, 575, 95);
-                  ctx.font = applyText(canvas, "Level: " + level + " " + progress, 400, 30);
-                  ctx.strokeText("Level: " + level + " " + progress, 260, 85);
-                	ctx.fillText("Level: " + level + " " + progress, 260, 85);
-                  ctx.font = "28px Arial";
-                  ctx.strokeText("Message Count", 240, 185);
-                	ctx.fillText("Message Count", 240, 185);
-                  ctx.strokeText("Time in Call", 450, 185);
-                	ctx.fillText("Time in Call", 450, 185);
-                  ctx.strokeText(messageCount, 240, 215);
-                	ctx.fillText(messageCount, 240, 215);
-                  ctx.font = applyText(canvas, timeStamp(vcTime), 450, 28);
-                  ctx.strokeText(timeStamp(vcTime), 450, 215);
-                	ctx.fillText(timeStamp(vcTime), 450, 215);
-
-                  ctx.lineWidth = 10;
-                  ctx.arc(125,125,105,0,2*Math.PI,false);
-                  ctx.fillStyle='#1d1f21'; // for color of circle
-                  ctx.fill(); // fill function
-                  ctx.strokeStyle='#1d1f21'; // for border color
-                  ctx.stroke(); // Stroke function
-                  ctx.beginPath();
-                  ctx.strokeStyle='#00bfff'; // for border color
-                  ctx.arc(125,125,105, bar,Math.PI*1.5,true);
-                  ctx.stroke();
-
-                	ctx.beginPath();
-                	ctx.arc(125, 125, 100, 0, Math.PI * 2, true);
-                	ctx.closePath();
-                  ctx.clip();
-
-                	const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ format: 'jpg' }));
-                	ctx.drawImage(avatar, 25, 25, 200, 200);
-
-                	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
-                  msg.channel.send(attachment);
-                });
-              }
-            });
-          } else {
-            msg.channel.send("Unable to Identify the User Specified");
-          }
-        }
-      }
-
-      //Count sent messages
-      if (msg.author.bot !== true && msg.content.substring(0, prefix.length) !== prefix) {
-        var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
-        connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
-          if (result.length === 0) {
-            var sql = "INSERT INTO stats (userID, guildID, messageCount, xp) VALUES ?";
-            var values = [[msg.author.id, msg.guild.id, 1, (Math.floor(Math.random() * 3) + 2)]];
-            connection.query(sql, [values], function (err, result) {
-              if (err) throw err;
-            });
-          } else {
-            var xp = result[0].xp;
-            var levelInfo = levelCalc(xp);
-            var level = levelInfo[0];
-            var newXP = (Math.floor(Math.random() * 3) + 2) + xp;
-            var sql = "UPDATE stats SET messageCount = ? , xp = ? WHERE userID= ? AND guildID= ?";
-            connection.query(sql, [result[0].messageCount + 1, newXP, msg.author.id, msg.guild.id], function (err, result) {
-              if (err) throw err;
-              levelInfo = levelCalc(newXP);
-              var newLevel = levelInfo[0];
-              if (newLevel > level) {
-                var check = "SELECT * FROM guild WHERE guildID= ?";
-                connection.query(check, [msg.guild.id], function (err, result, fields) {
-                  if (result[0].lvlChannel !== undefined || result[0].lvlChannel !== null) {
-                    var channel = msg.guild.channels.cache.array().find((channel) => {
-                      return channel.id === result[0].lvlChannel;
-                    });
-                    var embed = new Discord.MessageEmbed();
-                    embed.setTitle("Level Up!");
-                    embed.setColor("#00ff00");
-                    embed.setDescription("Congratulations <@" + msg.author.id + ">!\nYou just leveled up to level **" + newLevel + "**\nKeep talking to reach higher levels!");
-                    embed.setThumbnail(msg.author.displayAvatarURL());
-                    channel.send(embed);
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-
-      //leaderboard
-      if (msg.content === `${prefix}leaderboard`) {
-        var member = msg.member;
-        connection.query("SELECT * FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], function (err, ranking) {
-          var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
-          var count = 20;
-          var leaderboard = "";
-          if (ranking.length < 20) {
-            count = ranking.length;
-          }
-          for (var i = 1; i <= count; i++) {
-            var user = identify(ranking[i-1].userID, msg).displayName;
-            var xp = ranking[i-1].xp;
-            var levelInfo = levelCalc(xp);
-            var level = levelInfo[0];
-            var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
-            if (xp > 1000) {
-              xp = Math.floor(xp/100)/10 + "k";
-            }
-            if (i == 1) {
-              leaderboard += "\:first_place: - Level **" + level + "** " + progress + " - " + user + "\n";
-            } else if (i == 2) {
-              leaderboard += "\:second_place: - Level **" + level + "** " + progress + " - " + user + "\n";
-            } else if (i == 3) {
-              leaderboard += "\:third_place: - Level **" + level + "** " + progress + " - " + user + "\n";
+          } else if (parser[0] === `${prefix}member`) {
+            //If identifying a specific member
+            var info = identify(parser[1], msg);
+            if (info === undefined || info.user.bot === true) {
+              msg.channel.send("Unable to Identify the User Specified");
             } else {
-              leaderboard += "**#" + i + "** - Level **" + level + "** " + progress + " - " + user + "\n";
+              var member = info;
+              var user = member.user;
+              var roles = member.roles.cache.array().join(", ");
+              var joinedAt = member.joinedAt.toString().split(" ");
+              var createdAt = user.createdAt.toString().split(" ");
+              var embed = new Discord.MessageEmbed();
+              embed.setTitle(user.tag);
+              embed.setDescription("Here is some information about " + member.displayName);
+              embed.setColor("#ffae42");
+              embed.setThumbnail(user.avatarURL());
+              embed.addFields(
+                { name: '\:pencil2: Display Name', value: member.displayName, inline: true},
+                { name: '\:id: User ID', value: user.id, inline: true},
+                { name: '\:arrow_up: Highest Role', value: member.roles.highest, inline: true},
+                { name: '\:scroll: Roles', value: roles},
+                { name: '\:calendar: Joined ' + msg.guild.name, value: joinedAt[0] + ", " + joinedAt[2] + " " + joinedAt[1] + " " + joinedAt[3] + "\n**(" + timeSince(member.joinedAt) + ")**", inline: true},
+                { name: '\:calendar: Account Creation', value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(user.createdAt) + ")**", inline: true}
+              )
+              msg.channel.send(embed);
             }
           }
+        }
+
+        //server info
+        if (msg.content === `${prefix}server`) {
+          var numOfPeople = msg.guild.members.cache.array().filter((member) => {
+            return member.user.bot === false;
+          }).length;
+          var numOfBots = msg.guild.memberCount - numOfPeople;
+          var emojis = msg.guild.emojis.cache.array();
+          var animojis = emojis.filter((emoji) => {
+            return emoji.animated === true;
+          });
+          var channels = msg.guild.channels.cache.array();
+          var categories = channels.filter((channel) => {
+            return channel.type === "category";
+          });
+          var voiceCalls = channels.filter((channel) => {
+            return channel.type === "voice";
+          });
+          var roles = msg.guild.roles.cache.array();
+          var roleList;
+          if (roles.length > 40) {
+            roles.splice(39);
+            roleList = roles.join(", ") + ", and more...";
+          } else {
+            roleList = roles.join(", ");
+          }
+          var createdAt = msg.guild.createdAt.toString().split(" ");
           var embed = new Discord.MessageEmbed();
-          embed.setTitle(msg.guild.name + "'s Leveling Leaderboard");
-          embed.setDescription("Here is the current leveling leaderboard of **" + msg.guild.name + "**.");
-          embed.setThumbnail(msg.guild.iconURL());
-          embed.setColor("#FFD700");
+          embed.setTitle("**" + msg.guild.name + " (ID: " + msg.guild.id + ")**");
+          embed.setDescription("Here is some information about **" + msg.guild.name + "**");
+          embed.setColor("#00CED1");
           embed.addFields(
-            { name: "Your Rank", value: "You are currently ranked #" + rank + " in this server"},
-            { name: "TOP 20", value: leaderboard, inline: true}
+            { name: "\:crown: Owner", value: msg.guild.owner.user.tag, inline: true},
+            { name: "\:busts_in_silhouette: Members", value: "**" +numOfPeople + "** Users\n**" + numOfBots + "** Bots", inline: true},
+            { name: "\:sunglasses: Emojis (" + emojis.length + ")", value: "Static: **" + (emojis.length - animojis.length) + "**\nAnimated: **" + animojis.length + "**", inline: true},
+            { name: "\:dividers: Categories", value: categories.length + " Categories", inline: true},
+            { name: "\:speech_balloon: Channels (" + (channels.length-categories.length) + ")", value: "Text: **" + (channels.length-voiceCalls.length-categories.length) + "**\nVoice: **" + voiceCalls.length + "**", inline: true},
+            { name: "\:arrow_up: Highest Role", value: msg.guild.roles.highest, inline: true},
+            { name: "\:scroll: Roles (" + msg.guild.roles.cache.array().length + ")", value: roleList},
+            { name: "\:calendar: Created At", value: createdAt[0] + ", " + createdAt[2] + " " + createdAt[1] + " " + createdAt[3] + "\n**(" + timeSince(msg.guild.createdAt) + ")**"}
           );
           msg.channel.send(embed);
-        });
-      }
+        }
 
-
-      //jail: Stores role of user and assigns a jail role (Role needs to restrict every channel to no see except one)
-      if (msg.content.includes(`${prefix}jail`)) {
-        var check = "SELECT * FROM guild WHERE guildID= ?";
-        connection.query(check, [msg.guild.id], function (err, result, fields) {
-          if (result[0].jailRoleID === undefined || result[0].jailRoleID === null) {
-            msg.guild.roles.create({
-              data: {
-                name: 'JailTest',
-                color: '#777777',
-                position: msg.guild.me.roles.highest.position
-              }
-            }).then((role) => {
-              msg.guild.channels.cache.array().forEach((channel) => {
-                channel.updateOverwrite(role.id, { VIEW_CHANNEL: false });
+        //Show stats of users
+        if (msg.content.includes(`${prefix}stats`)) {
+          var parser = msg.content.split(" ");
+          var member;
+          if (parser.length == 1) {
+            //Defaults to identifying the author of the message
+            member = msg.member;
+            if (member !== undefined && member.user.bot === false) {
+              var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
+              connection.query(check, [member.id, member.guild.id], function (err, time, fields) {
+                if (time.length !== 0) {
+                  connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [member.id, member.guild.id], async function (err, ranking) {
+                    var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+                    connection.query(check, [member.id, member.guild.id], function (err, result, fields) {
+                      var present = new Date();
+                      var difference = Math.floor(present/1000) - time[0].joinedAt;
+                      if (result.length === 0) {
+                        var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+                        var values = [[member.id, member.guild.id, difference, Math.floor(difference/30)]];
+                        connection.query(sql, [values], function (err, result) {
+                          if (err) throw err;
+                        });
+                      } else {
+                        var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+                        connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/30), member.id, member.guild.id], function (err, result) {
+                          if (err) throw err;
+                        });
+                      }
+                    });
+                  });
+                  var joinedAt = Math.floor(new Date()/1000);
+                  var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+                  var values = [[member.id, member.guild.id, joinedAt]];
+                  connection.query(sql, [values], function (err, result) {
+                    if (err) throw err;
+                  });
+                }
               });
-              msg.guild.channels.create('Jail', {
-                permissionOverwrites: [
-                   {
-                     id: msg.guild.roles.everyone.id,
-                     deny: ['VIEW_CHANNEL'],
-                  },
-                  {
-                    id: role.id,
-                    allow: ['VIEW_CHANNEL'],
-                  }
-                ],
-              });
-              var sql = "UPDATE guild SET jailRoleID= ? WHERE guildID= ?";
-              connection.query(sql, [role.id, msg.guild.id], function (err, result) {
+              connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], async function (err, result) {
                 if (err) throw err;
-                var jailRole = role;
-                var parser = msg.content.split(" ");
-                if (parser.length === 1) {//If no parameters given
-                  var embed = new Discord.MessageEmbed();
-                  embed.setDescription("Please specify a user to jail");
-                  embed.setColor("#FF0000");
-                  msg.reply(embed);
-                } else if (parser[0] === `${prefix}jail`) {
-                  member = identify(parser[1], msg);
-                  if (member === undefined) {
+                if (result.length === 0) {
+                  msg.reply("No stats exist for specified User");
+                } else {
+                  var messageCount = result[0].messageCount;
+                  if (messageCount === null) {
+                    messageCount = 0;
+                  }
+                  var vcTime = result[0].vcTime;
+                  if (vcTime === null) {
+                    vcTime = 0;
+                  }
+                  var xp = result[0].xp;
+                  var levelInfo = levelCalc(xp);
+                  var level = levelInfo[0];
+                  var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
+                  var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
+                  var ratio = ((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]));
+                  ratio *= (2*Math.PI);
+                  var bar = ((2*Math.PI)-ratio);
+                  bar = ((1.5*Math.PI)-bar);
+                  if (xp > 1000) {
+                    xp = Math.floor(xp/100)/10 + "k";
+                  }
+                  connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], async function (err, ranking) {
+                    var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
+                    const canvas = Canvas.createCanvas(700, 250);
+                  	const ctx = canvas.getContext('2d');
+
+                  	const background = await Canvas.loadImage('./wallpaper.jpg');
+                  	ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+                  	ctx.strokeStyle = '#74037b';
+                  	ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+                  	// Assign the decided font to the canvas
+                  	ctx.font = applyText(canvas, member.user.tag, 375, 50);
+                  	ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(member.user.tag, 240, 50);
+                  	ctx.fillText(member.user.tag, 240, 50);
+                    ctx.font = applyText(canvas, "Rank:", 600, 50);
+                    ctx.strokeText("Rank:", 590, 50);
+                  	ctx.fillText("Rank:", 590, 50);
+                    ctx.font = applyText(canvas, "#" + rank, 585, 50);
+                    ctx.strokeText("#" + rank, 575, 95);
+                  	ctx.fillText("#" + rank, 575, 95);
+                    ctx.font = applyText(canvas, "Level: " + level + " " + progress, 400, 30);
+                    ctx.strokeText("Level: " + level + " " + progress, 260, 85);
+                  	ctx.fillText("Level: " + level + " " + progress, 260, 85);
+                    ctx.font = "28px Arial";
+                    ctx.strokeText("Message Count", 240, 185);
+                  	ctx.fillText("Message Count", 240, 185);
+                    ctx.strokeText("Time in Call", 450, 185);
+                  	ctx.fillText("Time in Call", 450, 185);
+                    ctx.strokeText(messageCount, 240, 215);
+                  	ctx.fillText(messageCount, 240, 215);
+                    ctx.font = applyText(canvas, timeStamp(vcTime), 450, 28);
+                    ctx.strokeText(timeStamp(vcTime), 450, 215);
+                  	ctx.fillText(timeStamp(vcTime), 450, 215);
+
+                    ctx.lineWidth = 10;
+                    ctx.arc(125,125,105,0,2*Math.PI,false);
+                    ctx.fillStyle='#1d1f21'; // for color of circle
+                    ctx.fill(); // fill function
+                    ctx.strokeStyle='#1d1f21'; // for border color
+                    ctx.stroke(); // Stroke function
+                    ctx.beginPath();
+                    ctx.strokeStyle='#00bfff'; // for border color
+                    ctx.arc(125,125,105, bar,Math.PI*1.5,true);
+                    ctx.stroke();
+
+                  	ctx.beginPath();
+                  	ctx.arc(125, 125, 100, 0, Math.PI * 2, true);
+                  	ctx.closePath();
+                    ctx.clip();
+
+                  	const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ format: 'jpg' }));
+                  	ctx.drawImage(avatar, 25, 25, 200, 200);
+
+                  	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
+                    msg.channel.send(attachment);
+                  });
+                }
+              });
+            } else {
+              msg.channel.send("Unable to Identify the User Specified");
+            }
+          } else if (parser[0] === `${prefix}stats`) {
+            //Takes second part of input to identify user in question
+            member = identify(parser[1], msg);
+            if (member !== undefined && member.user.bot === false) {
+              var check = "SELECT joinedAt FROM vctracking WHERE userID= ? AND guildID= ?";
+              connection.query(check, [member.id, member.guild.id], function (err, time, fields) {
+                if (time.length !== 0) {
+                  connection.query("DELETE FROM vctracking WHERE userID= ? AND guildID = ?", [member.id, member.guild.id], async function (err, ranking) {
+                    var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+                    connection.query(check, [member.id, member.guild.id], function (err, result, fields) {
+                      var present = new Date();
+                      var difference = Math.floor(present/1000) - time[0].joinedAt;
+                      if (result.length === 0) {
+                        var sql = "INSERT INTO stats (userID, guildID, vcTime, xp) VALUES ?";
+                        var values = [[member.id, member.guild.id, difference, Math.floor(difference/30)]];
+                        connection.query(sql, [values], function (err, result) {
+                          if (err) throw err;
+                        });
+                      } else {
+                        var sql = "UPDATE stats SET vcTime = ?, xp = xp + ? WHERE userID= ? AND guildID= ?";
+                        connection.query(sql, [result[0].vcTime+difference, Math.floor(difference/30), member.id, member.guild.id], function (err, result) {
+                          if (err) throw err;
+                        });
+                      }
+                    });
+                  });
+                  var joinedAt = Math.floor(new Date()/1000);
+                  var sql = "INSERT INTO vctracking (userID, guildID, joinedAt) VALUES ?";
+                  var values = [[member.id, member.guild.id, joinedAt]];
+                  connection.query(sql, [values], function (err, result) {
+                    if (err) throw err;
+                  });
+                }
+              });
+              connection.query("SELECT * FROM stats WHERE userID = ? AND guildID = ?", [member.user.id, msg.guild.id], async function (err, result) {
+                if (err) throw err;
+                if (result.length === 0) {
+                  msg.reply("No stats exist for specified User");
+                } else {
+                  var messageCount = result[0].messageCount;
+                  if (messageCount === null) {
+                    messageCount = 0;
+                  }
+                  var vcTime = result[0].vcTime;
+                  if (vcTime === null) {
+                    vcTime = 0;
+                  }
+                  var xp = result[0].xp;
+                  var levelInfo = levelCalc(xp);
+                  var level = levelInfo[0];
+                  var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
+                  var levelBar = pBarGen(xp-levelInfo[2], levelInfo[1]-levelInfo[2]);
+                  var ratio = ((xp-levelInfo[2])/(levelInfo[1]-levelInfo[2]));
+                  ratio *= (2*Math.PI);
+                  var bar = ((2*Math.PI)-ratio);
+                  bar = ((1.5*Math.PI)-bar);
+                  if (xp > 1000) {
+                    xp = Math.floor(xp/100)/10 + "k";
+                  }
+                  connection.query("SELECT userID FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], async function (err, ranking) {
+                    var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
+                    const canvas = Canvas.createCanvas(700, 250);
+                  	const ctx = canvas.getContext('2d');
+
+                  	const background = await Canvas.loadImage('./wallpaper.jpg');
+                  	ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+                  	ctx.strokeStyle = '#74037b';
+                  	ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+                  	// Assign the decided font to the canvas
+                  	ctx.font = applyText(canvas, member.user.tag, 375, 50);
+                  	ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(member.user.tag, 240, 50);
+                  	ctx.fillText(member.user.tag, 240, 50);
+                    ctx.font = applyText(canvas, "Rank:", 600, 50);
+                    ctx.strokeText("Rank:", 590, 50);
+                  	ctx.fillText("Rank:", 590, 50);
+                    ctx.font = applyText(canvas, "#" + rank, 585, 50);
+                    ctx.strokeText("#" + rank, 575, 95);
+                  	ctx.fillText("#" + rank, 575, 95);
+                    ctx.font = applyText(canvas, "Level: " + level + " " + progress, 400, 30);
+                    ctx.strokeText("Level: " + level + " " + progress, 260, 85);
+                  	ctx.fillText("Level: " + level + " " + progress, 260, 85);
+                    ctx.font = "28px Arial";
+                    ctx.strokeText("Message Count", 240, 185);
+                  	ctx.fillText("Message Count", 240, 185);
+                    ctx.strokeText("Time in Call", 450, 185);
+                  	ctx.fillText("Time in Call", 450, 185);
+                    ctx.strokeText(messageCount, 240, 215);
+                  	ctx.fillText(messageCount, 240, 215);
+                    ctx.font = applyText(canvas, timeStamp(vcTime), 450, 28);
+                    ctx.strokeText(timeStamp(vcTime), 450, 215);
+                  	ctx.fillText(timeStamp(vcTime), 450, 215);
+
+                    ctx.lineWidth = 10;
+                    ctx.arc(125,125,105,0,2*Math.PI,false);
+                    ctx.fillStyle='#1d1f21'; // for color of circle
+                    ctx.fill(); // fill function
+                    ctx.strokeStyle='#1d1f21'; // for border color
+                    ctx.stroke(); // Stroke function
+                    ctx.beginPath();
+                    ctx.strokeStyle='#00bfff'; // for border color
+                    ctx.arc(125,125,105, bar,Math.PI*1.5,true);
+                    ctx.stroke();
+
+                  	ctx.beginPath();
+                  	ctx.arc(125, 125, 100, 0, Math.PI * 2, true);
+                  	ctx.closePath();
+                    ctx.clip();
+
+                  	const avatar = await Canvas.loadImage(member.user.displayAvatarURL({ format: 'jpg' }));
+                  	ctx.drawImage(avatar, 25, 25, 200, 200);
+
+                  	const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'welcome-image.png');
+                    msg.channel.send(attachment);
+                  });
+                }
+              });
+            } else {
+              msg.channel.send("Unable to Identify the User Specified");
+            }
+          }
+        }
+
+        //Count sent messages
+        if (msg.author.bot !== true && msg.content.substring(0, prefix.length) !== prefix) {
+          var check = "SELECT * FROM stats WHERE userID= ? AND guildID= ?";
+          connection.query(check, [msg.author.id, msg.guild.id], function (err, result, fields) {
+            if (result.length === 0) {
+              var sql = "INSERT INTO stats (userID, guildID, messageCount, xp) VALUES ?";
+              var values = [[msg.author.id, msg.guild.id, 1, (Math.floor(Math.random() * 3) + 2)]];
+              connection.query(sql, [values], function (err, result) {
+                if (err) throw err;
+              });
+            } else {
+              var xp = result[0].xp;
+              var levelInfo = levelCalc(xp);
+              var level = levelInfo[0];
+              var newXP = (Math.floor(Math.random() * 3) + 2) + xp;
+              var sql = "UPDATE stats SET messageCount = ? , xp = ? WHERE userID= ? AND guildID= ?";
+              connection.query(sql, [result[0].messageCount + 1, newXP, msg.author.id, msg.guild.id], function (err, result) {
+                if (err) throw err;
+                levelInfo = levelCalc(newXP);
+                var newLevel = levelInfo[0];
+                if (newLevel > level) {
+                  var check = "SELECT * FROM guild WHERE guildID= ?";
+                  connection.query(check, [msg.guild.id], function (err, result, fields) {
+                    if (result[0].lvlChannel !== undefined || result[0].lvlChannel !== null) {
+                      var channel = msg.guild.channels.cache.array().find((channel) => {
+                        return channel.id === result[0].lvlChannel;
+                      });
+                      var embed = new Discord.MessageEmbed();
+                      embed.setTitle("Level Up!");
+                      embed.setColor("#00ff00");
+                      embed.setDescription("Congratulations <@" + msg.author.id + ">!\nYou just leveled up to level **" + newLevel + "**\nKeep talking to reach higher levels!");
+                      embed.setThumbnail(msg.author.displayAvatarURL());
+                      channel.send(embed);
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+
+        //leaderboard
+        if (msg.content === `${prefix}leaderboard`) {
+          var member = msg.member;
+          connection.query("SELECT * FROM stats WHERE guildID = ? ORDER BY xp DESC", [msg.guild.id], function (err, ranking) {
+            var rank = ranking.indexOf(ranking.find((id) => id.userID === member.user.id)) + 1;
+            var count = 20;
+            var leaderboard = "";
+            if (ranking.length < 20) {
+              count = ranking.length;
+            }
+            for (var i = 1; i <= count; i++) {
+              var user = identify(ranking[i-1].userID, msg).displayName;
+              var xp = ranking[i-1].xp;
+              var levelInfo = levelCalc(xp);
+              var level = levelInfo[0];
+              var progress = "(" + (xp-levelInfo[2]) + "/" + (levelInfo[1]-levelInfo[2]) + ")";
+              if (xp > 1000) {
+                xp = Math.floor(xp/100)/10 + "k";
+              }
+              if (i == 1) {
+                leaderboard += "\:first_place: - Level **" + level + "** " + progress + " - " + user + "\n";
+              } else if (i == 2) {
+                leaderboard += "\:second_place: - Level **" + level + "** " + progress + " - " + user + "\n";
+              } else if (i == 3) {
+                leaderboard += "\:third_place: - Level **" + level + "** " + progress + " - " + user + "\n";
+              } else {
+                leaderboard += "**#" + i + "** - Level **" + level + "** " + progress + " - " + user + "\n";
+              }
+            }
+            var embed = new Discord.MessageEmbed();
+            embed.setTitle(msg.guild.name + "'s Leveling Leaderboard");
+            embed.setDescription("Here is the current leveling leaderboard of **" + msg.guild.name + "**.");
+            embed.setThumbnail(msg.guild.iconURL());
+            embed.setColor("#FFD700");
+            embed.addFields(
+              { name: "Your Rank", value: "You are currently ranked #" + rank + " in this server"},
+              { name: "TOP 20", value: leaderboard, inline: true}
+            );
+            msg.channel.send(embed);
+          });
+        }
+
+
+        //jail: Stores role of user and assigns a jail role (Role needs to restrict every channel to no see except one)
+        if (msg.content.includes(`${prefix}jail`)) {
+          var check = "SELECT * FROM guild WHERE guildID= ?";
+          connection.query(check, [msg.guild.id], function (err, result, fields) {
+            if (result[0].jailRoleID === undefined || result[0].jailRoleID === null) {
+              msg.guild.roles.create({
+                data: {
+                  name: 'JailTest',
+                  color: '#777777',
+                  position: msg.guild.me.roles.highest.position
+                }
+              }).then((role) => {
+                msg.guild.channels.cache.array().forEach((channel) => {
+                  channel.updateOverwrite(role.id, { VIEW_CHANNEL: false });
+                });
+                msg.guild.channels.create('Jail', {
+                  permissionOverwrites: [
+                     {
+                       id: msg.guild.roles.everyone.id,
+                       deny: ['VIEW_CHANNEL'],
+                    },
+                    {
+                      id: role.id,
+                      allow: ['VIEW_CHANNEL'],
+                    }
+                  ],
+                });
+                var sql = "UPDATE guild SET jailRoleID= ? WHERE guildID= ?";
+                connection.query(sql, [role.id, msg.guild.id], function (err, result) {
+                  if (err) throw err;
+                  var jailRole = role;
+                  var parser = msg.content.split(" ");
+                  if (parser.length === 1) {//If no parameters given
                     var embed = new Discord.MessageEmbed();
-                    embed.setDescription("Specified User could not be found");
+                    embed.setDescription("Please specify a user to jail");
                     embed.setColor("#FF0000");
                     msg.reply(embed);
-                  } else {
-                    if (member.user.bot === true) {
+                  } else if (parser[0] === `${prefix}jail`) {
+                    member = identify(parser[1], msg);
+                    if (member === undefined) {
                       var embed = new Discord.MessageEmbed();
-                      embed.setDescription("You can't jail a bot!");
+                      embed.setDescription("Specified User could not be found");
                       embed.setColor("#FF0000");
                       msg.reply(embed);
                     } else {
-                      if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
-                        var roles = [];
-                        member.roles.cache.array().forEach((role) => {
-                          roles.push(role.id);
-                        });
-                        roles = roles.join(",");
-                        member.roles.set([jailRole.id]);
-                        var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
-                        var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
-                        connection.query(sql, [values], function (err, result) {
-                          if (err) throw err;
-                          var embed = new Discord.MessageEmbed();
-                          embed.setTitle("Jailed " + member.user.tag);
-                          embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
-                          embed.setColor("#ff6700");
-                          msg.reply(embed);
-                        });
-                      } else {
+                      if (member.user.bot === true) {
                         var embed = new Discord.MessageEmbed();
-                        embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                        embed.setDescription("You can't jail a bot!");
                         embed.setColor("#FF0000");
                         msg.reply(embed);
+                      } else {
+                        if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
+                          var roles = [];
+                          member.roles.cache.array().forEach((role) => {
+                            roles.push(role.id);
+                          });
+                          roles = roles.join(",");
+                          member.roles.set([jailRole.id]);
+                          var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
+                          var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
+                          connection.query(sql, [values], function (err, result) {
+                            if (err) throw err;
+                            var embed = new Discord.MessageEmbed();
+                            embed.setTitle("Jailed " + member.user.tag);
+                            embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
+                            embed.setColor("#ff6700");
+                            msg.reply(embed);
+                          });
+                        } else {
+                          var embed = new Discord.MessageEmbed();
+                          embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                          embed.setColor("#FF0000");
+                          msg.reply(embed);
+                        }
                       }
                     }
                   }
-                }
+                });
               });
-            });
-          } else {
-            var jailRole = result[0].jailRoleID;
-            var parser = msg.content.split(" ");
-            if (parser.length === 1) {//If no parameters given
-              var embed = new Discord.MessageEmbed();
-              embed.setDescription("Please specify a user to jail");
-              embed.setColor("#FF0000");
-              msg.reply(embed);
             } else {
-              member = identify(parser[1], msg);
-              if (member === undefined) {
+              var jailRole = result[0].jailRoleID;
+              var parser = msg.content.split(" ");
+              if (parser.length === 1) {//If no parameters given
                 var embed = new Discord.MessageEmbed();
-                embed.setDescription("Specified User could not be found");
+                embed.setDescription("Please specify a user to jail");
                 embed.setColor("#FF0000");
                 msg.reply(embed);
               } else {
-                if (member.user.bot === true) {
+                member = identify(parser[1], msg);
+                if (member === undefined) {
                   var embed = new Discord.MessageEmbed();
-                  embed.setDescription("You can't jail a bot!");
+                  embed.setDescription("Specified User could not be found");
                   embed.setColor("#FF0000");
                   msg.reply(embed);
                 } else {
-                  if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
-                    var roles = [];
-                    member.roles.cache.array().forEach((role) => {
-                      roles.push(role.id);
-                    });
-                    roles = roles.join(",");
-                    member.roles.set([jailRole]);
-                    var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
-                    var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
-                    connection.query(sql, [values], function (err, result) {
-                      if (err) throw err;
-                      var embed = new Discord.MessageEmbed();
-                      embed.setTitle("Jailed " + member.user.tag);
-                      embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
-                      embed.setColor("#ff6700");
-                      msg.reply(embed);
-                    });
-                  } else {
+                  if (member.user.bot === true) {
                     var embed = new Discord.MessageEmbed();
-                    embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                    embed.setDescription("You can't jail a bot!");
                     embed.setColor("#FF0000");
                     msg.reply(embed);
+                  } else {
+                    if (msg.member.roles.highest.comparePositionTo(member.roles.highest) > 0) {//Prevent people with lower roles from jailing those with the same or higher roles
+                      var roles = [];
+                      member.roles.cache.array().forEach((role) => {
+                        roles.push(role.id);
+                      });
+                      roles = roles.join(",");
+                      member.roles.set([jailRole]);
+                      var sql = "INSERT INTO actions (guildID, userID, actionType, storedData) VALUES ?";
+                      var values = [[msg.guild.id, member.user.id, 'jailed', roles]];
+                      connection.query(sql, [values], function (err, result) {
+                        if (err) throw err;
+                        var embed = new Discord.MessageEmbed();
+                        embed.setTitle("Jailed " + member.user.tag);
+                        embed.setDescription(msg.member.displayName + " has jailed " + member.user.tag);
+                        embed.setColor("#ff6700");
+                        msg.reply(embed);
+                      });
+                    } else {
+                      var embed = new Discord.MessageEmbed();
+                      embed.setDescription("This user has the same or higher role than you, you cannot jail them.");
+                      embed.setColor("#FF0000");
+                      msg.reply(embed);
+                    }
                   }
                 }
-              }
-            }
-          }
-        });
-      }
-
-      if (msg.content.includes(`${prefix}unjail`)) {
-        var parser = msg.content.split(" ");
-        if (parser.length == 1) {
-          var embed = new Discord.MessageEmbed();
-          embed.setDescription("Please specify the user you wish to unjail");
-          embed.setColor("#FF0000");
-          msg.reply(embed);
-        } else if (parser[0] === `${prefix}unjail`) {
-          member = identify(parser[1], msg);
-          if (member === undefined) {
-            var embed = new Discord.MessageEmbed();
-            embed.setDescription("Specified User could not be found");
-            embed.setColor("#FF0000");
-            msg.reply(embed);
-          } else {
-            var check = "SELECT * FROM actions WHERE guildID= ? AND userID = ? AND actionType = ?";
-            connection.query(check, [msg.guild.id, member.user.id, 'jailed'], function (err, result, fields) {
-              if (result[0].length !== 0) {
-                var check = "DELETE FROM actions WHERE guildID= ? AND userID = ? AND actionType = ?";
-                connection.query(check, [msg.guild.id, member.user.id, 'jailed'], function (err, dQuery, fields) {
-                  member.roles.set(result[0].storedData.split(","));
-                  var embed = new Discord.MessageEmbed();
-                  embed.setDescription(member.user.tag + " has been released from Jail by " + msg.member.displayName);
-                  embed.setColor("#00FF00");
-                  msg.reply(embed);
-                });
-              } else {
-                var embed = new Discord.MessageEmbed();
-                embed.setDescription("Specified User doesn't appear to be in jail");
-                embed.setColor("#FF0000");
-                msg.reply(embed);
-              }
-            });
-          }
-        }
-      }
-
-      //Minecraft commands
-      if (msg.content.includes(`${prefix}mcProfile`)) {
-        //https://crafatar.com/avatars/uuid (for Head)
-        var parser = msg.content.split(" ");
-        if (parser.length == 1) {
-          var embed = new Discord.MessageEmbed();
-          embed.setDescription("Please specify a Minecraft Username");
-          embed.setColor("#FF0000");
-          msg.reply(embed);
-        } else if (parser[0] === `${prefix}mcProfile`) {
-          //Takes second part of input to identify user in question
-          MojangAPI.nameToUuid(parser[1], function(err, res) {
-            if (err)
-                console.log(err);
-            else {
-              if (res[0] === undefined) {
-                var embed = new Discord.MessageEmbed();
-                embed.setDescription("No User was found with the specified Username");
-                embed.setColor("#FF0000");
-                msg.reply(embed);
-              } else {
-                var username = res[0].name;
-                var uuid = res[0].id;
-                hypixel.getPlayer(uuid, { guild: true }).then(player => {
-                  var embed = new Discord.MessageEmbed();
-                  embed.setTitle(res[0].name);
-                  embed.setDescription("(UUID: " + res[0].id + ")");
-                  embed.setThumbnail("https://crafatar.com/renders/body/" + res[0].id);
-                  embed.setColor("#974A0C");
-                  embed.addFields(
-                    { name: "Network Level", value: player.level},
-                    { name: "Skywars Kills", value: player.stats.skywars.kills, inline: true},
-                    { name: "Skywars KD Ratio", value: player.stats.skywars.KDRatio, inline: true},
-                    { name: "Bedwars Beds Broken", value: player.stats.bedwars.beds.broken, inline:false},
-                  );
-
-                  msg.reply(embed);
-                }).catch(e => {
-                  console.log(e);
-                })
-
-
               }
             }
           });
         }
+
+        if (msg.content.includes(`${prefix}unjail`)) {
+          var parser = msg.content.split(" ");
+          if (parser.length == 1) {
+            var embed = new Discord.MessageEmbed();
+            embed.setDescription("Please specify the user you wish to unjail");
+            embed.setColor("#FF0000");
+            msg.reply(embed);
+          } else if (parser[0] === `${prefix}unjail`) {
+            member = identify(parser[1], msg);
+            if (member === undefined) {
+              var embed = new Discord.MessageEmbed();
+              embed.setDescription("Specified User could not be found");
+              embed.setColor("#FF0000");
+              msg.reply(embed);
+            } else {
+              var check = "SELECT * FROM actions WHERE guildID= ? AND userID = ? AND actionType = ?";
+              connection.query(check, [msg.guild.id, member.user.id, 'jailed'], function (err, result, fields) {
+                if (result[0].length !== 0) {
+                  var check = "DELETE FROM actions WHERE guildID= ? AND userID = ? AND actionType = ?";
+                  connection.query(check, [msg.guild.id, member.user.id, 'jailed'], function (err, dQuery, fields) {
+                    member.roles.set(result[0].storedData.split(","));
+                    var embed = new Discord.MessageEmbed();
+                    embed.setDescription(member.user.tag + " has been released from Jail by " + msg.member.displayName);
+                    embed.setColor("#00FF00");
+                    msg.reply(embed);
+                  });
+                } else {
+                  var embed = new Discord.MessageEmbed();
+                  embed.setDescription("Specified User doesn't appear to be in jail");
+                  embed.setColor("#FF0000");
+                  msg.reply(embed);
+                }
+              });
+            }
+          }
+        }
+
+        //Minecraft commands
+        if (msg.content.includes(`${prefix}mcProfile`)) {
+          //https://crafatar.com/avatars/uuid (for Head)
+          var parser = msg.content.split(" ");
+          if (parser.length == 1) {
+            var embed = new Discord.MessageEmbed();
+            embed.setDescription("Please specify a Minecraft Username");
+            embed.setColor("#FF0000");
+            msg.reply(embed);
+          } else if (parser[0] === `${prefix}mcProfile`) {
+            //Takes second part of input to identify user in question
+            MojangAPI.nameToUuid(parser[1], function(err, res) {
+              if (err)
+                  console.log(err);
+              else {
+                if (res[0] === undefined) {
+                  var embed = new Discord.MessageEmbed();
+                  embed.setDescription("No User was found with the specified Username");
+                  embed.setColor("#FF0000");
+                  msg.reply(embed);
+                } else {
+                  var username = res[0].name;
+                  var uuid = res[0].id;
+                  hypixel.getPlayer(uuid, { guild: true }).then(player => {
+                    var embed = new Discord.MessageEmbed();
+                    embed.setTitle(res[0].name);
+                    embed.setDescription("(UUID: " + res[0].id + ")");
+                    embed.setThumbnail("https://crafatar.com/renders/body/" + res[0].id);
+                    embed.setColor("#974A0C");
+                    embed.addFields(
+                      { name: "Network Level", value: player.level},
+                      { name: "Skywars Kills", value: player.stats.skywars.kills, inline: true},
+                      { name: "Skywars KD Ratio", value: player.stats.skywars.KDRatio, inline: true},
+                      { name: "Bedwars Beds Broken", value: player.stats.bedwars.beds.broken, inline:false},
+                    );
+
+                    msg.reply(embed);
+                  }).catch(e => {
+                    console.log(e);
+                  })
+
+
+                }
+              }
+            });
+          }
+        }
+
+        /*if (msg.content === `${prefix}quiz`) {
+          const mapKey = msg.guild.id;
+          if (!msg.member.voice.channelID) {
+              msg.reply('Error: please join a voice channel first.')
+          } else {
+              if (!guildMap.has(mapKey))
+                  await connect(msg, mapKey)
+              var check = "SELECT * FROM songs";
+              connection.query(check, function (err, song, fields) {
+                music_message(_CMD_PLAY + randomInd(song).youtube_link, mapKey);
+              });
+          }
+        }*/
+      }
+      try {
+          if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
+          const mapKey = msg.guild.id;
+          if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
+              if (!msg.member.voice.channelID) {
+                  msg.reply('Error: please join a voice channel first.')
+              } else {
+                  if (!guildMap.has(mapKey))
+                      await connect(msg, mapKey).catch(e => { console.log(e) })
+                  else
+                      msg.reply('Already connected')
+              }
+          } else if (msg.content.trim().toLowerCase() == _CMD_LEAVE) {
+              if (guildMap.has(mapKey)) {
+                  let val = guildMap.get(mapKey);
+                  if (val.voice_Channel) val.voice_Channel.leave()
+                  if (val.voice_Connection) val.voice_Connection.disconnect()
+                  if (val.musicYTStream) val.musicYTStream.destroy()
+                      guildMap.delete(mapKey)
+                  msg.reply("Disconnected.")
+              } else {
+                  msg.reply("Cannot leave because not connected.")
+              }
+          }
+          else if ( PLAY_CMDS.indexOf( msg.content.trim().toLowerCase().split('\n')[0].split(' ')[0] ) >= 0 ) {
+              if (!msg.member.voice.channelID) {
+                  msg.reply('Error: please join a voice channel first.')
+              } else {
+                  if (!guildMap.has(mapKey))
+                      await connect(msg, mapKey).catch(e => { console.log(e) })
+                  music_message(msg, mapKey);
+              }
+          } else if (msg.content.trim().toLowerCase() == _CMD_HELP) {
+              msg.reply(getHelpString(prefix));
+          }
+          else if (msg.content.trim().toLowerCase() == _CMD_DEBUG) {
+              console.log('toggling debug mode')
+              let val = guildMap.get(mapKey);
+              if (val.debug)
+                  val.debug = false;
+              else
+                  val.debug = true;
+          }
+          else if (msg.content.trim().toLowerCase() == _CMD_TEST) {
+              msg.reply('hello back =)')
+          }
+          else if (msg.content.split('\n')[0].split(' ')[0].trim().toLowerCase() == _CMD_LANG) {
+              const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
+              listWitAIApps(data => {
+                if (!data.length)
+                  return msg.reply('no apps found! :(')
+                for (const x of data) {
+                  updateWitAIAppLang(x.id, lang, data => {
+                    if ('success' in data)
+                      msg.reply('succes!')
+                    else if ('error' in data && data.error !== 'Access token does not match')
+                      msg.reply('Error: ' + data.error)
+                  })
+                }
+              })
+          }
+      } catch (e) {
+          console.log('client message: ' + e)
+          msg.reply('Error#180: Something went wrong, try again or contact the developers if this keeps happening.');
       }
     } else {
-      msg.reply(msg.guild.me.displayName + " doesn't have permission in this channel");
-    }
-    try {
-        if (!('guild' in msg) || !msg.guild) return; // prevent private messages to bot
-        const mapKey = msg.guild.id;
-        if (msg.content.trim().toLowerCase() == _CMD_JOIN) {
-            if (!msg.member.voice.channelID) {
-                msg.reply('Error: please join a voice channel first.')
-            } else {
-                if (!guildMap.has(mapKey))
-                    await connect(msg, mapKey)
-                else
-                    msg.reply('Already connected')
-            }
-        } else if (msg.content.trim().toLowerCase() == _CMD_LEAVE) {
-            if (guildMap.has(mapKey)) {
-                let val = guildMap.get(mapKey);
-                if (val.voice_Channel) val.voice_Channel.leave()
-                if (val.voice_Connection) val.voice_Connection.disconnect()
-                if (val.musicYTStream) val.musicYTStream.destroy()
-                    guildMap.delete(mapKey)
-                msg.reply("Disconnected.")
-            } else {
-                msg.reply("Cannot leave because not connected.")
-            }
-        }
-        else if ( PLAY_CMDS.indexOf( msg.content.trim().toLowerCase().split('\n')[0].split(' ')[0] ) >= 0 ) {
-            if (!msg.member.voice.channelID) {
-                msg.reply('Error: please join a voice channel first.')
-            } else {
-                if (!guildMap.has(mapKey))
-                    await connect(msg, mapKey)
-                music_message(msg, mapKey);
-            }
-        } else if (msg.content.trim().toLowerCase() == _CMD_HELP) {
-            msg.reply(getHelpString());
-        }
-        else if (msg.content.trim().toLowerCase() == _CMD_DEBUG) {
-            console.log('toggling debug mode')
-            let val = guildMap.get(mapKey);
-            if (val.debug)
-                val.debug = false;
-            else
-                val.debug = true;
-        }
-        else if (msg.content.trim().toLowerCase() == _CMD_TEST) {
-            msg.reply('hello back =)')
-        }
-        else if (msg.content.split('\n')[0].split(' ')[0].trim().toLowerCase() == _CMD_LANG) {
-            const lang = msg.content.replace(_CMD_LANG, '').trim().toLowerCase()
-            listWitAIApps(data => {
-              if (!data.length)
-                return msg.reply('no apps found! :(')
-              for (const x of data) {
-                updateWitAIAppLang(x.id, lang, data => {
-                  if ('success' in data)
-                    msg.reply('succes!')
-                  else if ('error' in data && data.error !== 'Access token does not match')
-                    msg.reply('Error: ' + data.error)
-                })
-              }
-            })
-        }
-    } catch (e) {
-        console.log('client message: ' + e)
-        msg.reply('Error#180: Something went wrong, try again or contact the developers if this keeps happening.');
+      if (msg.author.bot !== true) {
+        msg.reply(msg.guild.me.displayName + " doesn't have permission in this channel");
+      }
     }
   });
 });
@@ -1517,6 +1589,9 @@ function process_commands_query(query, mapKey, userid) {
             case 'hello':
                 out = 'hello back =)'
                 break;
+            case 'leave':
+              out = _CMD_LEAVE;
+              break;
             case 'favorites':
                 out = _CMD_FAVORITES;
                 break;
@@ -1874,6 +1949,7 @@ async function queueTryPlayNext(mapKey, cbok, cberr) {
         val.musicYTStream = ytdl('https://www.youtube.com/watch?v=' + ytid, {
             filter: 'audioonly',
             quality: 'highestaudio',
+            //begin: '00:02:00.000',
             highWaterMark: 1024*1024*10, // 10mb
         }, {highWaterMark: 1})
         val.musicDispatcher = val.voice_Connection.play(val.musicYTStream);
@@ -2242,5 +2318,56 @@ async function spotify_tracks_from_playlist(spotifyurl) {
 //////////////////////////////////////////
 //////////////////////////////////////////
 
+function getHelpString(prefix) {
+    let out = '**VOICE COMMANDS:**\n'
+        out += '```'
+        out += 'music help\n'
+        out += 'music play [random, favorites, <genre> or query]\n'
+        out += 'music skip\n'
+        out += 'music pause/resume\n'
+        out += 'music shuffle\n'
+        out += 'music genres\n'
+        out += 'music set favorite\n'
+        out += 'music favorites\n'
+        out += 'music list\n'
+        out += 'music clear\n';
+        out += '```'
 
+        out += '**TEXT COMMANDS:**\n'
+        out += '```'
+        out += _CMD_HELP + '\n'
+        out += `${prefix}ping\n`;
+        out += _CMD_JOIN + '/' + _CMD_LEAVE + '\n'
+        out += _CMD_PLAY + ' [query]\n'
+        out += _CMD_GENRE + ' [name]\n'
+        out += _CMD_RANDOM + '\n'
+        out += _CMD_PAUSE + '/' + _CMD_RESUME + '\n'
+        out += _CMD_SKIP + '\n'
+        out += _CMD_SHUFFLE + '\n'
+        out += _CMD_FAVORITE + '\n'
+        out += _CMD_UNFAVORITE + ' [name]\n'
+        out += _CMD_FAVORITES + '\n'
+        out += _CMD_GENRES + '\n'
+        out += _CMD_QUEUE + '\n';
+        out += _CMD_CLEAR + '\n';
+        out += `${prefix}eat\n`;
+        out += `${prefix}scared [optional user]\n`;
+        out += `${prefix}happy\n`;
+        out += `${prefix}excited\n`;
+        out += `${prefix}vibing [optional user]\n`;
+        out += `${prefix}goodnight [optional user]\n`;
+        out += `${prefix}urstupid [user]\n`;
+        out += `${prefix}member [optional user]\n`;
+        out += `${prefix}server\n`;
+        out += `${prefix}stats [optional user]\n`;
+        out += `${prefix}leaderboard\n`;
+        out += `${prefix}jail [user]\n`;
+        out += `${prefix}unjail [user]\n`;
+        out += `${prefix}mcProfile [minecraft username]\n`;
+        out += `${prefix}setLvlChannel\n`;
+        out += `${prefix}restrict\n`;
+        out += `${prefix}allow [tag channel]\n`;
+        out += '```'
+    return out;
+}
 client.login(token);
