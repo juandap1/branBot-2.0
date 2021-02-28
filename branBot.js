@@ -1726,11 +1726,16 @@ async function music_message(message, mapKey) {
             }
             else if (isSpotify(qry)) {
                 try {
+                  if (qry.includes("https://open.spotify.com/playlist/")) {
                     const arr = await spotify_tracks_from_playlist(qry);
                     console.log(arr.length + ' spotify items from playlist')
                     for (let item of arr)
                         addToQueue(item, mapKey);
                     message.react(EMOJI_GREEN_CIRCLE)
+                  } else if (qry.includes("https://open.spotify.com/track/")) {
+                    const track = await spotify_tracks(qry);
+                    addToQueue(track, mapKey);
+                  }
                 } catch(e) {
                     console.log('music_message 464:' + e)
                     message.channel.send('Failed processing spotify link: ' + qry);
@@ -2309,11 +2314,23 @@ function spotify_extract_trackname(item) {
         }
 
         let title = item.name;
-        let track = title + ' ' + name
+        let track = title + ' ' + name + ' lyrics';
         return track;
     } else if ('track' in item && 'artists' in item.track) {
         return spotify_extract_trackname(item.track);
     }
+}
+
+async function spotify_tracks(url) {
+  const ui = url.replace("https://open.spotify.com/track/", "").split("?")[0];
+  let track = await spotifyClient
+    .request('https://api.spotify.com/v1/tracks/' + ui)
+    .then(function(data) {
+      return spotify_extract_trackname(data);
+  }).catch(function(err) {
+      console.error('spotify_tracks: ' + err);
+  });
+  return(track);
 }
 
 async function spotify_new_releases() {
