@@ -10,7 +10,19 @@ const util = require('util');
 const path = require('path');
 const request = require('request');
 const { Readable } = require('stream');
-const { API, Regions, Locales, Queue } = require("node-valorant-api");
+
+/*var STARBOARD = {};
+var STARBOARD_FILE = "./data/starboard.json";
+var json = JSON.stringify({id: "814983183875047445"});
+if (fs.existsSync(STARBOARD_FILE)) {
+    const data = fs.readFileSync(STARBOARD_FILE, 'utf8');
+    STARBOARD = JSON.parse(data);
+    console.log(STARBOARD);
+}
+fs.writeFile(STARBOARD_FILE, json, 'utf8', (err)=>{
+    if (err) return console.log('STARBOARD_FILE:' + err);
+});*/
+/*const { API, Regions, Locales, Queue } = require("node-valorant-api");
 
 const APIKey = "RGAPI-01aa9cf6-965f-49f7-9e64-025cdb8b5b92"; // Your API Key
 
@@ -19,7 +31,7 @@ const APIKey = "RGAPI-01aa9cf6-965f-49f7-9e64-025cdb8b5b92"; // Your API Key
 const valorant = new API(Regions.NA, APIKey, Regions.AMERICAS); // An API instance for Valorant query
 valorant.ContentV1.getContent(Locales["en-US"]).then(content => {
     console.log(content.characters.map(char => { return char.name }));
-});
+});*/
 //////////////////////////////////////////
 ///////////////// VARIA //////////////////
 //////////////////////////////////////////
@@ -178,12 +190,34 @@ const GENRES = {
     'techno': ['techno'],
 
 }
+var prefix = "+";
+var PREFIX = '+';
+var _CMD_HELP        = PREFIX + 'help';
+var _CMD_JOIN        = PREFIX + 'join';
+var _CMD_LEAVE       = PREFIX + 'leave';
+var _CMD_PLAY        = PREFIX + 'play';
+var _CMD_PAUSE       = PREFIX + 'pause';
+var _CMD_RESUME      = PREFIX + 'resume';
+var _CMD_SHUFFLE     = PREFIX + 'shuffle';
+var _CMD_FAVORITE    = PREFIX + 'favorite';
+var _CMD_UNFAVORITE  = PREFIX + 'unfavorite';
+var _CMD_FAVORITES   = PREFIX + 'favorites';
+var _CMD_GENRE       = PREFIX + 'genre';
+var _CMD_GENRES      = PREFIX + 'genres';
+var _CMD_CLEAR       = PREFIX + 'clear';
+var _CMD_RANDOM      = PREFIX + 'random';
+var _CMD_SKIP        = PREFIX + 'skip';
+var _CMD_QUEUE       = PREFIX + 'list';
+var _CMD_DEBUG       = PREFIX + 'debug';
+var _CMD_TEST        = PREFIX + 'hello';
+var _CMD_LANG        = PREFIX + 'lang';
+var PLAY_CMDS = [_CMD_PLAY, _CMD_PAUSE, _CMD_RESUME, _CMD_SHUFFLE, _CMD_SKIP, _CMD_GENRE, _CMD_GENRES, _CMD_RANDOM, _CMD_CLEAR, _CMD_QUEUE, _CMD_FAVORITE, _CMD_FAVORITES, _CMD_UNFAVORITE];
 /*hypixel.getPlayer('JuanPabby').then(player => {
   console.log(player); // 141
 }).catch(e => {
   console.error(e);
 });*/
-
+var loop = {};
 
 /*connection.query('SELECT * FROM stats', function (error, results, fields) {
     if (error)
@@ -202,7 +236,7 @@ const GENRES = {
 });*/
 
 const Discord = require('discord.js');
-const client = new Discord.Client();
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
 
 //functions
 function randomInd(arr) {
@@ -401,25 +435,30 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
   }
 });
 
-/*
-var parser = msg.content.split(" ");
-if (parser.length === 1) {
+client.on('messageReactionAdd', async (reaction, user) => {
+	// When we receive a reaction we check if the reaction is partial or not
+	if (reaction.partial) {
+		// If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+		try {
+			await reaction.fetch();
+		} catch (error) {
+			console.error('Something went wrong when fetching the message: ', error);
+			// Return as `reaction.message.author` may be undefined/null
+			return;
+		}
+	}
+	// Now the message has been cached and is fully available
+	console.log(`${reaction.message.author}'s message "${reaction.message.content}" gained a reaction!`);
+	// The reaction is now also fully available and the properties will be reflected accurately:
+	console.log(`${reaction.count} user(s) have given the same reaction to this message!`);
+});
 
-} else {
-  var info = identify(parser[1], msg);
-  if (info === undefined || info.user.bot === true) {
-    msg.channel.send("Unable to Identify the User Specified");
-  } else {
-
-  }
-}
-*/
 var liberated = false;
 const guildMap = new Map();
 const DISCORD_MSG_LIMIT = 2000;
 client.on('message', async msg => {
-  var prefix = "+";
-  var PREFIX = '+';
+  prefix = "+";
+  PREFIX = '+';
   var allowedChannel;
   var check = "SELECT * FROM guild WHERE guildID= ?";
   connection.query(check, [msg.guild.id], async function (err, time, fields) {
@@ -463,26 +502,26 @@ client.on('message', async msg => {
       }
     }
 
-    var _CMD_HELP        = PREFIX + 'help';
-    var _CMD_JOIN        = PREFIX + 'join';
-    var _CMD_LEAVE       = PREFIX + 'leave';
-    var _CMD_PLAY        = PREFIX + 'play';
-    var _CMD_PAUSE       = PREFIX + 'pause';
-    var _CMD_RESUME      = PREFIX + 'resume';
-    var _CMD_SHUFFLE     = PREFIX + 'shuffle';
-    var _CMD_FAVORITE    = PREFIX + 'favorite';
-    var _CMD_UNFAVORITE  = PREFIX + 'unfavorite';
-    var _CMD_FAVORITES   = PREFIX + 'favorites';
-    var _CMD_GENRE       = PREFIX + 'genre';
-    var _CMD_GENRES      = PREFIX + 'genres';
-    var _CMD_CLEAR       = PREFIX + 'clear';
-    var _CMD_RANDOM      = PREFIX + 'random';
-    var _CMD_SKIP        = PREFIX + 'skip';
-    var _CMD_QUEUE       = PREFIX + 'list';
-    var _CMD_DEBUG       = PREFIX + 'debug';
-    var _CMD_TEST        = PREFIX + 'hello';
-    var _CMD_LANG        = PREFIX + 'lang';
-    var PLAY_CMDS = [_CMD_PLAY, _CMD_PAUSE, _CMD_RESUME, _CMD_SHUFFLE, _CMD_SKIP, _CMD_GENRE, _CMD_GENRES, _CMD_RANDOM, _CMD_CLEAR, _CMD_QUEUE, _CMD_FAVORITE, _CMD_FAVORITES, _CMD_UNFAVORITE];
+    _CMD_HELP        = PREFIX + 'help';
+    _CMD_JOIN        = PREFIX + 'join';
+    _CMD_LEAVE       = PREFIX + 'leave';
+    _CMD_PLAY        = PREFIX + 'play';
+    _CMD_PAUSE       = PREFIX + 'pause';
+    _CMD_RESUME      = PREFIX + 'resume';
+    _CMD_SHUFFLE     = PREFIX + 'shuffle';
+    _CMD_FAVORITE    = PREFIX + 'favorite';
+    _CMD_UNFAVORITE  = PREFIX + 'unfavorite';
+    _CMD_FAVORITES   = PREFIX + 'favorites';
+    _CMD_GENRE       = PREFIX + 'genre';
+    _CMD_GENRES      = PREFIX + 'genres';
+    _CMD_CLEAR       = PREFIX + 'clear';
+    _CMD_RANDOM      = PREFIX + 'random';
+    _CMD_SKIP        = PREFIX + 'skip';
+    _CMD_QUEUE       = PREFIX + 'list';
+    _CMD_DEBUG       = PREFIX + 'debug';
+    _CMD_TEST        = PREFIX + 'hello';
+    _CMD_LANG        = PREFIX + 'lang';
+    PLAY_CMDS = [_CMD_PLAY, _CMD_PAUSE, _CMD_RESUME, _CMD_SHUFFLE, _CMD_SKIP, _CMD_GENRE, _CMD_GENRES, _CMD_RANDOM, _CMD_CLEAR, _CMD_QUEUE, _CMD_FAVORITE, _CMD_FAVORITES, _CMD_UNFAVORITE];
 
     if ((((allowedChannel !== undefined && allowedChannel !== null) && allowedChannel.includes(msg.channel.id)) || (allowedChannel === undefined || allowedChannel === null))) {
       if (!msg.author.bot) {
@@ -1391,6 +1430,30 @@ client.on('message', async msg => {
           }
         }
 
+        if (msg.content === `${prefix}loop`) {
+          if (loop[msg.guild.id] === undefined || loop[msg.guild.id] === false) {
+            loop[msg.guild.id] = true;
+            let val = guildMap.get(msg.guild.id);
+            if (val.currentPlayingQuery !== undefined) {
+              val.musicQueue.unshift(val.currentPlayingQuery);
+            }
+            var embed = new Discord.MessageEmbed();
+            embed.setDescription("Now looping **the current track**");
+            embed.setColor("#c0c0c0");
+            msg.channel.send(embed);
+          } else {
+            loop[msg.guild.id] = false;
+            if (val.currentPlayingQuery !== undefined) {
+              val.musicQueue.shift();
+            }
+            var embed = new Discord.MessageEmbed();
+            embed.setDescription("Looping is now **disabled**");
+            embed.setColor("#c0c0c0");
+
+            msg.channel.send(embed);
+          }
+        }
+
         /*if (msg.content === `${prefix}quiz`) {
           const mapKey = msg.guild.id;
           if (!msg.member.voice.channelID) {
@@ -1424,6 +1487,7 @@ client.on('message', async msg => {
                   if (val.voice_Connection) val.voice_Connection.disconnect()
                   if (val.musicYTStream) val.musicYTStream.destroy()
                       guildMap.delete(mapKey)
+                      loop[mapKey] = undefined;
                   msg.reply("Disconnected.")
               } else {
                   msg.reply("Cannot leave because not connected.")
@@ -1936,8 +2000,12 @@ async function queueTryPlayNext(mapKey, cbok, cberr) {
             return;
         if (val.currentPlayingTitle)
             return;
-
-        const qry = val.musicQueue.shift();
+        var qry;
+        if (loop[mapKey] === undefined || loop[mapKey] === false) {
+          qry = val.musicQueue.shift();
+        } else {
+          qry = val.musicQueue[0];
+        }
         const data = await getYoutubeVideoData(qry)
         const ytid = data.id;
         const title = data.title;
